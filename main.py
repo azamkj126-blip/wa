@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from typing import Optional
 from fastapi import FastAPI, HTTPException
@@ -24,31 +25,35 @@ class ReserveRequest(BaseModel):
 
 @app.get("/health")
 async def health():
-    # مسار لإبقاء سيرفر Render مستيقظاً عبر خدمة مراقبة خارجية
     return {"status": "alive", "bots_count": len(BOT_USERNAMES)}
 
 
 @app.get("/numbers")
 async def get_available_numbers(refresh: bool = False, country: Optional[str] = None):
-    """
-    يعرض الأرقام المتوفرة من كل بوت (رقم/دفعة من كل بوت غير مقفل).
-    """
     manager._cleanup_expired_locks()
-    results = []
-    for bot_name in BOT_USERNAMES:
+
+    async def fetch_one(bot_name: str):
         state = manager.bots[bot_name]
         if state.locked:
-            continue
+            return []
         if refresh or not state.numbers:
             await manager.fetch_from_bot(bot_name, country=country)
-        for item in state.numbers:
-            if item.status == "AVAILABLE":
-                results.append({
-                    "phone": item.phone,
-                    "country": item.country,
-                    "bot": item.bot_username,
-                })
+        return [
+            {"phone": item.phone, "country": item.country, "bot": item.bot_username}
+            for item in state.numbers
+            if item.status == "AVAILABLE"
+        ]
+
+    # تشغيل البوتات الخمسة في نفس الوقت (بالتوازي)
+    batches = await asyncio.gather(*(fetch_one(b) for b in BOT_USERNAMES))
+    results = [item for batch in batches for item in batch]
     return {"numbers": results}
+
+
+@app.get("/debug/trace")
+async def debug_trace():
+    """يعرض آخر خطوات وأزرار وصل إليها كل بوت"""
+    return manager.last_trace
 
 
 @app.post("/reserve")
@@ -71,11 +76,7 @@ async def check_otp(phone: str):
     for state in manager.bots.values():
         for item in state.numbers:
             if item.phone == phone:
-                return {
-                    "phone": item.phone,
-                    "status": item.status,
-                    "otp": item.otp_code,
-                }
+                return {"phone": item.phone, "status": item.status, "otp": item.otp_code}
     raise HTTPException(status_code=404, detail="الرقم غير موجود في الجلسة الحالية")
 
 
