@@ -30,7 +30,6 @@ async def health():
 
 @app.get("/countries")
 async def get_countries():
-    """يعرض جميع الدول المتوفرة عبر البوتات الخمسة فوراً"""
     return {"countries": manager.get_countries_catalog()}
 
 
@@ -40,41 +39,43 @@ async def get_available_numbers(
     country: Optional[str] = None,
     refresh: bool = False,
 ):
-    """
-    إذا أُرسل bot و country: يجلب أرقام هذه الدولة فقط من البوت المحدد.
-    """
     manager._cleanup_expired_locks()
 
     if bot:
         if bot not in BOT_USERNAMES:
-            raise HTTPException(status_code=404, detail="البوت غير موجود")
+            return {"numbers": [], "error": "البوت غير موجود"}
         state = manager.bots[bot]
         if state.locked:
-            raise HTTPException(status_code=409, detail="هذا البوت محجوز حالياً لمستخدم آخر")
-        items = await manager.fetch_from_bot(bot, country=country, force_refresh=refresh)
+            return {"numbers": [], "error": "هذا البوت محجوز حالياً لمستخدم آخر"}
+        items, err = await manager.fetch_from_bot(bot, country=country, force_refresh=refresh)
         return {
             "numbers": [
                 {"phone": item.phone, "country": item.country, "bot": item.bot_username}
                 for item in items
                 if item.status == "AVAILABLE"
-            ]
+            ],
+            "error": err,
         }
 
-    # الوضع الافتراضي إذا لم يُحدد بوت معين
     async def fetch_one(bot_name: str):
         state = manager.bots[bot_name]
         if state.locked:
             return []
-        await manager.fetch_from_bot(bot_name, country=country, force_refresh=refresh)
+        items, _ = await manager.fetch_from_bot(bot_name, country=country, force_refresh=refresh)
         return [
             {"phone": item.phone, "country": item.country, "bot": item.bot_username}
-            for item in state.numbers
+            for item in items
             if item.status == "AVAILABLE"
         ]
 
     batches = await asyncio.gather(*(fetch_one(b) for b in BOT_USERNAMES))
     results = [item for batch in batches for item in batch]
-    return {"numbers": results}
+    return {"numbers": results, "error": None}
+
+
+@app.get("/debug/errors")
+async def debug_errors():
+    return {"errors": manager.last_errors}
 
 
 @app.post("/reserve")
