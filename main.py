@@ -28,32 +28,53 @@ async def health():
     return {"status": "alive", "bots_count": len(BOT_USERNAMES)}
 
 
+@app.get("/countries")
+async def get_countries():
+    """يعرض جميع الدول المتوفرة عبر البوتات الخمسة فوراً"""
+    return {"countries": manager.get_countries_catalog()}
+
+
 @app.get("/numbers")
-async def get_available_numbers(refresh: bool = False, country: Optional[str] = None):
+async def get_available_numbers(
+    bot: Optional[str] = None,
+    country: Optional[str] = None,
+    refresh: bool = False,
+):
+    """
+    إذا أُرسل bot و country: يجلب أرقام هذه الدولة فقط من البوت المحدد.
+    """
     manager._cleanup_expired_locks()
 
+    if bot:
+        if bot not in BOT_USERNAMES:
+            raise HTTPException(status_code=404, detail="البوت غير موجود")
+        state = manager.bots[bot]
+        if state.locked:
+            raise HTTPException(status_code=409, detail="هذا البوت محجوز حالياً لمستخدم آخر")
+        items = await manager.fetch_from_bot(bot, country=country, force_refresh=refresh)
+        return {
+            "numbers": [
+                {"phone": item.phone, "country": item.country, "bot": item.bot_username}
+                for item in items
+                if item.status == "AVAILABLE"
+            ]
+        }
+
+    # الوضع الافتراضي إذا لم يُحدد بوت معين
     async def fetch_one(bot_name: str):
         state = manager.bots[bot_name]
         if state.locked:
             return []
-        if refresh or not state.numbers:
-            await manager.fetch_from_bot(bot_name, country=country)
+        await manager.fetch_from_bot(bot_name, country=country, force_refresh=refresh)
         return [
             {"phone": item.phone, "country": item.country, "bot": item.bot_username}
             for item in state.numbers
             if item.status == "AVAILABLE"
         ]
 
-    # تشغيل البوتات الخمسة في نفس الوقت (بالتوازي)
     batches = await asyncio.gather(*(fetch_one(b) for b in BOT_USERNAMES))
     results = [item for batch in batches for item in batch]
     return {"numbers": results}
-
-
-@app.get("/debug/trace")
-async def debug_trace():
-    """يعرض آخر خطوات وأزرار وصل إليها كل بوت"""
-    return manager.last_trace
 
 
 @app.post("/reserve")
@@ -84,8 +105,3 @@ async def check_otp(phone: str):
 async def release_bot(bot_username: str):
     manager.release_bot(bot_username)
     return {"status": "released", "bot": bot_username}
-
-
-@app.get("/debug/inspect/{bot_username}")
-async def debug_inspect(bot_username: str, cmd: str = "/start"):
-    return await manager.inspect_bot_buttons(bot_username, cmd)
