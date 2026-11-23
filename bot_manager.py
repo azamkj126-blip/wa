@@ -32,6 +32,43 @@ BOT_USERNAMES = [
     "JXOTPBot",
 ]
 
+# كتالوج جميع الدول المتوفرة في البوتات الخمسة
+COUNTRIES_CATALOG = [
+    {"country": "Yemen", "ar": "اليمن", "iso": "YE", "bot": "B_M_Numbers_Files_bot"},
+    {"country": "Sudan", "ar": "السودان", "iso": "SD", "bot": "SOJIB_BRO_FRESH_NUMBER_BOT"},
+    {"country": "Pakistan", "ar": "باكستان", "iso": "PK", "bot": "SOJIB_BRO_FRESH_NUMBER_BOT"},
+    {"country": "Cambodia", "ar": "كمبوديا", "iso": "KH", "bot": "JXOTPBot"},
+    # NumberNest_2_Bot
+    {"country": "Egypt", "ar": "مصر (سيرفر 1)", "iso": "EG", "bot": "NumberNest_2_Bot"},
+    {"country": "Sudan", "ar": "السودان (سيرفر 2)", "iso": "SD", "bot": "NumberNest_2_Bot"},
+    {"country": "Syria", "ar": "سوريا", "iso": "SY", "bot": "NumberNest_2_Bot"},
+    {"country": "Lebanon", "ar": "لبنان", "iso": "LB", "bot": "NumberNest_2_Bot"},
+    {"country": "Italy", "ar": "إيطاليا (سيرفر 1)", "iso": "IT", "bot": "NumberNest_2_Bot"},
+    {"country": "Ethiopia", "ar": "إثيوبيا", "iso": "ET", "bot": "NumberNest_2_Bot"},
+    {"country": "Malaysia", "ar": "ماليزيا", "iso": "MY", "bot": "NumberNest_2_Bot"},
+    {"country": "Mali", "ar": "مالي (سيرفر 1)", "iso": "ML", "bot": "NumberNest_2_Bot"},
+    {"country": "Ukraine", "ar": "أوكرانيا", "iso": "UA", "bot": "NumberNest_2_Bot"},
+    {"country": "Uzbekistan", "ar": "أوزبكستان", "iso": "UZ", "bot": "NumberNest_2_Bot"},
+    {"country": "Vietnam", "ar": "فيتنام", "iso": "VN", "bot": "NumberNest_2_Bot"},
+    # smslybot
+    {"country": "Egypt", "ar": "مصر (سيرفر 2)", "iso": "EG", "bot": "smslybot"},
+    {"country": "Italy", "ar": "إيطاليا (سيرفر 2)", "iso": "IT", "bot": "smslybot"},
+    {"country": "Pakistan", "ar": "باكستان (سيرفر 2)", "iso": "PK", "bot": "smslybot"},
+    {"country": "Russia", "ar": "روسيا", "iso": "RU", "bot": "smslybot"},
+    {"country": "Georgia", "ar": "جورجيا", "iso": "GE", "bot": "smslybot"},
+    {"country": "Bolivia", "ar": "بوليفيا", "iso": "BO", "bot": "smslybot"},
+    {"country": "Cuba", "ar": "كوبا", "iso": "CU", "bot": "smslybot"},
+    {"country": "Venezuela", "ar": "فنزويلا", "iso": "VE", "bot": "smslybot"},
+    {"country": "Guinea", "ar": "غينيا", "iso": "GN", "bot": "smslybot"},
+    {"country": "Laos", "ar": "لاوس", "iso": "LA", "bot": "smslybot"},
+    {"country": "Maldives", "ar": "المالديف", "iso": "MV", "bot": "smslybot"},
+    {"country": "Mali", "ar": "مالي (سيرفر 2)", "iso": "ML", "bot": "smslybot"},
+    {"country": "Senegal", "ar": "السنغال", "iso": "SN", "bot": "smslybot"},
+    {"country": "Timor Leste", "ar": "تيمور الشرقية", "iso": "TL", "bot": "smslybot"},
+    {"country": "Togo", "ar": "توغو", "iso": "TG", "bot": "smslybot"},
+    {"country": "Zambia", "ar": "زامبيا", "iso": "ZM", "bot": "smslybot"},
+]
+
 
 @dataclass
 class NumberItem:
@@ -48,6 +85,7 @@ class NumberItem:
 class BotState:
     username: str
     locked: bool = False
+    active_country: Optional[str] = None
     last_message_id: Optional[int] = None
     numbers: List[NumberItem] = field(default_factory=list)
 
@@ -58,7 +96,6 @@ class TelegramNumberManager:
         self.bots: Dict[str, BotState] = {b: BotState(username=b) for b in BOT_USERNAMES}
         self._op_locks: Dict[str, asyncio.Lock] = {b: asyncio.Lock() for b in BOT_USERNAMES}
         self.last_trace: Dict[str, List[dict]] = {b: [] for b in BOT_USERNAMES}
-        self.last_alerts: Dict[str, str] = {}
         self.http = httpx.AsyncClient(timeout=10.0)
 
     async def start(self):
@@ -69,9 +106,17 @@ class TelegramNumberManager:
         await self.http.aclose()
         await self.client.disconnect()
 
-    # ==========================================================
-    # 1. مستمع الأكواد (القروبات + محادثات البوتات)
-    # ==========================================================
+    def get_countries_catalog(self) -> List[dict]:
+        self._cleanup_expired_locks()
+        result = []
+        for entry in COUNTRIES_CATALOG:
+            bot_state = self.bots[entry["bot"]]
+            result.append({
+                **entry,
+                "bot_busy": bot_state.locked,
+            })
+        return result
+
     def _register_otp_listeners(self):
         monitored_chats = OTP_GROUPS + BOT_USERNAMES
 
@@ -116,25 +161,15 @@ class TelegramNumberManager:
                             item.status = "COMPLETED"
                             return
 
-    # ==========================================================
-    # 2. تجاهل إشعارات البث العشوائية
-    # ==========================================================
     def _is_noise_message(self, msg: Optional[Message]) -> bool:
         if not msg:
             return False
         text = (msg.raw_text or "").lower()
-        noise_keywords = [
-            "messga otp received",
-            "otp received",
-            "otp code:",
-            "╭──────",
-        ]
+        noise_keywords = ["messga otp received", "otp received", "otp code:", "╭──────"]
         if any(k in text for k in noise_keywords):
             return True
         if msg.buttons:
-            btn_texts = " ".join(
-                (b.text or "").lower() for row in msg.buttons for b in row
-            )
+            btn_texts = " ".join((b.text or "").lower() for row in msg.buttons for b in row)
             if "panel" in btn_texts and "developer" in btn_texts:
                 return True
         return False
@@ -147,24 +182,6 @@ class TelegramNumberManager:
                 if text_contains.lower() in (btn.text or "").lower():
                     return True
         return False
-
-    def _serialize_msg(self, bot: str, step: str, msg: Optional[Message]) -> dict:
-        if not msg:
-            info = {"step": step, "error": "No response / Timeout"}
-            alert = self.last_alerts.pop(bot, None)
-            if alert:
-                info["popup_alert"] = alert
-            return info
-        btns = []
-        if msg.buttons:
-            for r, row in enumerate(msg.buttons):
-                for c, btn in enumerate(row):
-                    btns.append(f"[{r},{c}] {btn.text}")
-        return {
-            "step": step,
-            "text": (msg.raw_text or "")[:300],
-            "buttons": btns,
-        }
 
     async def _send_and_wait(self, bot: str, text: str, timeout: int = 10) -> Optional[Message]:
         entity = await self.client.get_entity(bot)
@@ -189,8 +206,6 @@ class TelegramNumberManager:
         self,
         bot: str,
         msg: Optional[Message],
-        row: Optional[int] = None,
-        col: Optional[int] = None,
         flat_index: Optional[int] = None,
         text_contains: Optional[str] = None,
         timeout: int = 12,
@@ -198,7 +213,6 @@ class TelegramNumberManager:
         if not msg or not msg.buttons:
             return None
 
-        # تحديد إحداثيات الزر أولاً قبل التسجيل
         target_rc = None
         if text_contains:
             for r_idx, b_row in enumerate(msg.buttons):
@@ -210,8 +224,6 @@ class TelegramNumberManager:
                     break
             if not target_rc:
                 return None
-        elif row is not None and col is not None:
-            target_rc = (row, col)
         elif flat_index is None:
             return None
 
@@ -234,61 +246,31 @@ class TelegramNumberManager:
 
         click_task = asyncio.create_task(do_click())
         try:
-            # التقاط رد البوت فوراً دون انتظار إغلاق answerCallbackQuery
             done, _ = await asyncio.wait(
                 {click_task, fut},
                 timeout=timeout,
                 return_when=asyncio.FIRST_COMPLETED,
             )
-
             res = None
             if fut in done:
                 res = fut.result()
                 if not click_task.done():
                     click_task.cancel()
-                    try:
-                        await click_task
-                    except (asyncio.CancelledError, Exception):
-                        pass
-                else:
-                    try:
-                        click_task.result()
-                    except Exception:
-                        pass
             else:
-                click_alert = None
-                if click_task in done:
-                    try:
-                        click_res = click_task.result()
-                        if click_res and getattr(click_res, "message", None):
-                            click_alert = click_res.message
-                    except Exception as e:
-                        click_alert = f"click_error: {type(e).__name__}: {e}"
-                else:
+                if not click_task.done():
                     click_task.cancel()
-                    try:
-                        await click_task
-                    except (asyncio.CancelledError, Exception):
-                        pass
-
-                # لو لم تصل الرسالة بعد انتهاء الضغطة، ننتظر مهلة قصيرة إضافية
                 try:
                     res = await asyncio.wait_for(fut, timeout=6)
                 except asyncio.TimeoutError:
-                    if click_alert:
-                        self.last_alerts[bot] = click_alert
                     return None
 
-            # لو أرسل البوت رسالة "جاري التحميل..." بدون أزرار أو أرقام، ننتظر الرسالة الفعلية التالية
             if res and not res.buttons and not self._extract_phones_from_msg(res):
                 fut2 = asyncio.get_running_loop().create_future()
-
                 async def handler2(ev):
                     if getattr(ev.message, "out", False) or self._is_noise_message(ev.message):
                         return
                     if not fut2.done():
                         fut2.set_result(ev.message)
-
                 self.client.add_event_handler(handler2, events.NewMessage(chats=entity))
                 self.client.add_event_handler(handler2, events.MessageEdited(chats=entity))
                 try:
@@ -304,9 +286,6 @@ class TelegramNumberManager:
             if not click_task.done():
                 click_task.cancel()
 
-    # ==========================================================
-    # 3. استخراج الأرقام وفحص الواتساب
-    # ==========================================================
     def _extract_phones(self, text: str) -> List[str]:
         if not text:
             return []
@@ -348,106 +327,67 @@ class TelegramNumberManager:
                 fresh.append(NumberItem(phone=p, country=country, bot_username=bot_username))
         return fresh
 
-    # ==========================================================
-    # 4. مسارات السحب للبوتات الخمسة
-    # ==========================================================
-    async def fetch_from_bot(self, bot_username: str, country: Optional[str] = None, max_retries: int = 2) -> List[NumberItem]:
+    async def fetch_from_bot(
+        self,
+        bot_username: str,
+        country: Optional[str] = None,
+        force_refresh: bool = False,
+        max_retries: int = 3,
+    ) -> List[NumberItem]:
         state = self.bots[bot_username]
         if state.locked:
             return state.numbers
 
         async with self._op_locks[bot_username]:
-            available_now = [n for n in state.numbers if n.status == "AVAILABLE"]
-            if available_now:
-                return available_now
-
-            trace: List[dict] = []
-            self.last_trace[bot_username] = trace
-            self.last_alerts.pop(bot_username, None)
-            msg = None
             target_country = country or "Default"
+            # نعيد الأرقام المحفوظة فقط إذا كانت لنفس الدولة المطلوبة ولم يُطلب تحديث جديد
+            if (
+                not force_refresh
+                and state.active_country
+                and state.active_country.lower() == target_country.lower()
+            ):
+                available_now = [n for n in state.numbers if n.status == "AVAILABLE"]
+                if available_now:
+                    return available_now
 
-            try:
-                if bot_username == "B_M_Numbers_Files_bot":
-                    target_country = "Yemen"
-                    m1 = await self._send_and_wait(bot_username, "/getnumber")
-                    if not m1:
-                        m1 = await self._send_and_wait(bot_username, "/start")
-                    trace.append(self._serialize_msg(bot_username, "1: /getnumber", m1))
-                    m2 = (
-                        await self._click_and_wait(bot_username, m1, text_contains="whats")
-                        or await self._click_and_wait(bot_username, m1, flat_index=2)
-                    ) if m1 else None
-                    trace.append(self._serialize_msg(bot_username, "2: WhatsApp", m2))
-                    msg = (
-                        await self._click_and_wait(bot_username, m2, text_contains="اليمن")
-                        or await self._click_and_wait(bot_username, m2, text_contains="yemen")
-                        or await self._click_and_wait(bot_username, m2, flat_index=0)
-                    ) if m2 else None
-                    trace.append(self._serialize_msg(bot_username, "3: Yemen", msg))
+            msg = None
+            if bot_username == "B_M_Numbers_Files_bot":
+                target_country = "Yemen"
+                m1 = await self._send_and_wait(bot_username, "/getnumber")
+                m2 = await self._click_and_wait(bot_username, m1, text_contains="whats") if m1 else None
+                msg = await self._click_and_wait(bot_username, m2, text_contains="yemen") if m2 else None
 
-                elif bot_username == "smslybot":
-                    target_country = country or "Egypt"
-                    m1 = await self._send_and_wait(bot_username, "Get Number")
-                    trace.append(self._serialize_msg(bot_username, "1: Get Number", m1))
-                    m2 = await self._click_and_wait(bot_username, m1, text_contains="WhatsApp") if m1 else None
-                    trace.append(self._serialize_msg(bot_username, "2: WhatsApp", m2))
-                    msg = await self._click_and_wait(bot_username, m2, text_contains=target_country) if m2 else None
-                    trace.append(self._serialize_msg(bot_username, f"3: {target_country}", msg))
+            elif bot_username == "smslybot":
+                target_country = country or "Egypt"
+                m1 = await self._send_and_wait(bot_username, "Get Number")
+                m2 = await self._click_and_wait(bot_username, m1, text_contains="WhatsApp") if m1 else None
+                msg = await self._click_and_wait(bot_username, m2, text_contains=target_country) if m2 else None
 
-                elif bot_username == "SOJIB_BRO_FRESH_NUMBER_BOT":
-                    target_country = country or "Pakistan"
-                    m1 = await self._send_and_wait(bot_username, "/start")
-                    trace.append(self._serialize_msg(bot_username, "1: /start", m1))
-                    m2 = (
-                        await self._click_and_wait(bot_username, m1, text_contains="Get Number")
-                        or await self._click_and_wait(bot_username, m1, flat_index=0)
-                    ) if m1 else None
-                    trace.append(self._serialize_msg(bot_username, "2: Get Number", m2))
-                    m3 = (
-                        await self._click_and_wait(bot_username, m2, text_contains="whatsapp")
-                        or await self._click_and_wait(bot_username, m2, flat_index=0)
-                    ) if m2 else None
-                    trace.append(self._serialize_msg(bot_username, "3: WHATSAPP", m3))
-                    msg = (
-                        await self._click_and_wait(bot_username, m3, text_contains=target_country)
-                        or await self._click_and_wait(bot_username, m3, flat_index=0)
-                    ) if m3 else None
-                    trace.append(self._serialize_msg(bot_username, f"4: {target_country}", msg))
+            elif bot_username == "SOJIB_BRO_FRESH_NUMBER_BOT":
+                target_country = country or "Pakistan"
+                m1 = await self._send_and_wait(bot_username, "/start")
+                m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Number") if m1 else None
+                m3 = await self._click_and_wait(bot_username, m2, text_contains="whatsapp") if m2 else None
+                # بدون الرجوع لـ index 0 حتى لا يعطي باكستان لو اختار المستخدم السودان ولم تتوفر
+                msg = await self._click_and_wait(bot_username, m3, text_contains=target_country) if m3 else None
 
-                elif bot_username == "NumberNest_2_Bot":
-                    target_country = country or "Italy"
-                    m1 = await self._send_and_wait(bot_username, "/start")
-                    trace.append(self._serialize_msg(bot_username, "1: /start", m1))
-                    if m1 and self._has_button(m1, "Get Number"):
-                        m1 = await self._click_and_wait(bot_username, m1, text_contains="Get Number")
-                        trace.append(self._serialize_msg(bot_username, "1b: Get Number", m1))
-                    m2 = await self._click_and_wait(bot_username, m1, text_contains=target_country) if m1 else None
-                    trace.append(self._serialize_msg(bot_username, f"2: {target_country}", m2))
-                    msg = await self._click_and_wait(bot_username, m2, flat_index=0) if m2 else None
-                    trace.append(self._serialize_msg(bot_username, "3: Server 1", msg))
+            elif bot_username == "NumberNest_2_Bot":
+                target_country = country or "Italy"
+                m1 = await self._send_and_wait(bot_username, "/start")
+                if m1 and self._has_button(m1, "Get Number"):
+                    m1 = await self._click_and_wait(bot_username, m1, text_contains="Get Number")
+                m2 = await self._click_and_wait(bot_username, m1, text_contains=target_country) if m1 else None
+                if m2 and self._extract_phones_from_msg(m2):
+                    msg = m2
+                elif m2:
+                    msg = await self._click_and_wait(bot_username, m2, flat_index=0)
 
-                elif bot_username == "JXOTPBot":
-                    target_country = "Cambodia"
-                    m1 = await self._send_and_wait(bot_username, "/start")
-                    trace.append(self._serialize_msg(bot_username, "1: /start", m1))
-                    m2 = (
-                        await self._click_and_wait(bot_username, m1, text_contains="Get Numbers")
-                        or await self._click_and_wait(bot_username, m1, flat_index=0)
-                    ) if m1 else None
-                    trace.append(self._serialize_msg(bot_username, "2: Get Numbers", m2))
-                    m3 = (
-                        await self._click_and_wait(bot_username, m2, text_contains="whats")
-                        or await self._click_and_wait(bot_username, m2, flat_index=0)
-                    ) if m2 else None
-                    trace.append(self._serialize_msg(bot_username, "3: WhatsApp", m3))
-                    msg = (
-                        await self._click_and_wait(bot_username, m3, text_contains="cambodia")
-                        or await self._click_and_wait(bot_username, m3, flat_index=0)
-                    ) if m3 else None
-                    trace.append(self._serialize_msg(bot_username, "4: Cambodia", msg))
-            except Exception as e:
-                trace.append({"step": "exception", "error": str(e)})
+            elif bot_username == "JXOTPBot":
+                target_country = "Cambodia"
+                m1 = await self._send_and_wait(bot_username, "/start")
+                m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Numbers") if m1 else None
+                m3 = await self._click_and_wait(bot_username, m2, text_contains="whats") if m2 else None
+                msg = await self._click_and_wait(bot_username, m3, text_contains="cambodia") if m3 else None
 
             fresh_items: List[NumberItem] = []
             for _ in range(max_retries):
@@ -467,6 +407,7 @@ class TelegramNumberManager:
                 )
                 msg = next_msg
 
+            state.active_country = target_country
             state.numbers = fresh_items
             state.last_message_id = msg.id if msg else None
             return fresh_items
@@ -489,6 +430,7 @@ class TelegramNumberManager:
         state = self.bots.get(bot_username)
         if state:
             state.locked = False
+            state.active_country = None
             state.numbers = []
 
     def _cleanup_expired_locks(self, ttl_seconds: int = 300):
@@ -498,15 +440,5 @@ class TelegramNumberManager:
                 reserved = [n for n in state.numbers if n.status == "RESERVED"]
                 if reserved and (now - reserved[0].reserved_at) > ttl_seconds:
                     state.locked = False
+                    state.active_country = None
                     state.numbers = []
-
-    async def inspect_bot_buttons(self, bot_username: str, command: str = "/start"):
-        msg = await self._send_and_wait(bot_username, command)
-        if not msg:
-            return {"error": "No response from bot"}
-        buttons = []
-        if msg.buttons:
-            for r, row in enumerate(msg.buttons):
-                for c, btn in enumerate(row):
-                    buttons.append({"row": r, "col": c, "text": btn.text})
-        return {"text": msg.raw_text, "buttons": buttons}
