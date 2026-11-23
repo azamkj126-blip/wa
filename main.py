@@ -25,7 +25,11 @@ class ReserveRequest(BaseModel):
 
 @app.get("/health")
 async def health():
-    return {"status": "alive", "bots_count": len(BOT_USERNAMES)}
+    return {
+        "status": "alive",
+        "telegram_authorized": manager.authorized,
+        "bots_count": len(BOT_USERNAMES),
+    }
 
 
 @app.get("/countries")
