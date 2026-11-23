@@ -82,6 +82,11 @@ async def debug_errors():
     return {"errors": manager.last_errors}
 
 
+@app.get("/debug/trace")
+async def debug_trace():
+    return manager.last_trace
+
+
 @app.post("/reserve")
 async def reserve_number(req: ReserveRequest):
     item = manager.reserve_number(req.phone, req.user_id)
