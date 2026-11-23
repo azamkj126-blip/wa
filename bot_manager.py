@@ -95,19 +95,55 @@ class TelegramNumberManager:
         self._op_locks: Dict[str, asyncio.Lock] = {b: asyncio.Lock() for b in BOT_USERNAMES}
         self._entities: Dict[str, Any] = {}
         self.last_errors: Dict[str, str] = {}
+        self.authorized: bool = False
+        self._listeners_registered: bool = False
+        self._ready_event = asyncio.Event()
+        self._startup_task: Optional[asyncio.Task] = None
         self.http = httpx.AsyncClient(timeout=10.0)
 
-    async def start(self):
-        await self.client.start()
-        self._register_otp_listeners()
+    async def start(self, delay_seconds: int = 15):
+        # تأخير الاتصال بتيليجرام حتى يغلق Render النسخة القديمة أولاً فلا تُلغى الجلسة
+        self._startup_task = asyncio.create_task(self._delayed_connect(delay_seconds))
+
+    async def _delayed_connect(self, delay_seconds: int):
+        try:
+            await asyncio.sleep(delay_seconds)
+            await self.client.connect()
+            self.authorized = await self.client.is_user_authorized()
+            if self.authorized:
+                self._register_otp_listeners()
+                print("Telegram connected and authorized successfully.")
+            else:
+                self.last_errors["startup"] = "TG_STRING_SESSION منتهية أو ملغاة، تحتاج تجديد"
+                print("ERROR: TG_STRING_SESSION is invalid or revoked.")
+        except Exception as e:
+            self.authorized = False
+            self.last_errors["startup"] = f"{type(e).__name__}: {e}"
+            print(f"Telegram startup error: {e}")
+        finally:
+            self._ready_event.set()
 
     async def stop(self):
+        if self._startup_task and not self._startup_task.done():
+            self._startup_task.cancel()
         await self.http.aclose()
-        await self.client.disconnect()
+        if self.client.is_connected():
+            await self.client.disconnect()
 
     async def _ensure_connected(self):
+        if not self._ready_event.is_set():
+            try:
+                await asyncio.wait_for(self._ready_event.wait(), timeout=20)
+            except asyncio.TimeoutError:
+                pass
         if not self.client.is_connected():
             await self.client.connect()
+        if not self.authorized:
+            self.authorized = await self.client.is_user_authorized()
+            if self.authorized:
+                self._register_otp_listeners()
+        if not self.authorized:
+            raise RuntimeError("جلسة تيليجرام منتهية، يرجى تجديد TG_STRING_SESSION")
 
     async def _get_entity_cached(self, username: str):
         await self._ensure_connected()
@@ -123,6 +159,9 @@ class TelegramNumberManager:
         ]
 
     def _register_otp_listeners(self):
+        if self._listeners_registered:
+            return
+        self._listeners_registered = True
         monitored_chats = OTP_GROUPS + BOT_USERNAMES
 
         @self.client.on(events.NewMessage(chats=monitored_chats))
@@ -402,7 +441,7 @@ class TelegramNumberManager:
             except Exception as e:
                 err = f"{type(e).__name__}: {e}"
                 self.last_errors[bot_username] = err
-                return [], "تعذر الاتصال ببوت الأرقام حالياً، حاول مرة أخرى"
+                return [], str(e) if "جلسة تيليجرام" in str(e) else "تعذر الاتصال ببوت الأرقام حالياً، حاول مرة أخرى"
 
             if not msg:
                 err = "الدولة غير متوفرة حالياً في هذا البوت أو لم يستجب البوت"
@@ -410,12 +449,11 @@ class TelegramNumberManager:
                 return [], err
 
             fresh_items: List[NumberItem] = []
-            for attempt in range(max_retries):
+            for _ in range(max_retries):
                 phones = self._extract_phones_from_msg(msg)
                 fresh_items = await self._filter_fresh_numbers(phones, target_country, bot_username)
                 if fresh_items:
                     break
-                # لا نضغط تغيير الرقم إذا لم نجد زر تغيير واضح في الرسالة
                 change_rc = self._find_button_rc(
                     msg, ["change number", "تغيير الرقم", "تغيير", "رقم جديد", "new number"]
                 )
