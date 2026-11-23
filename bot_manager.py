@@ -9,6 +9,7 @@ from telethon import TelegramClient, events
 from telethon.errors import FloodWaitError
 from telethon.sessions import StringSession
 from telethon.tl.custom import Message
+from telethon.tl.types import ReplyInlineMarkup, ReplyKeyboardMarkup
 
 API_ID = int(os.getenv("TG_API_ID", "0"))
 API_HASH = os.getenv("TG_API_HASH", "")
@@ -211,13 +212,31 @@ class TelegramNumberManager:
         if not msg:
             return False
         text = (msg.raw_text or "").lower()
-        if any(k in text for k in ["messga otp received", "otp received", "otp code:", "╭──────"]):
+        noise_keywords = [
+            "messga otp received",
+            "otp received",
+            "otp code:",
+            "╭──────",
+            "استخدم كيبورد البوت",
+        ]
+        if any(k in text for k in noise_keywords):
             return True
         if msg.buttons:
             btn_texts = " ".join((b.text or "").lower() for row in msg.buttons for b in row)
             if "panel" in btn_texts and "developer" in btn_texts:
                 return True
         return False
+
+    def _button_signature(self, msg: Optional[Message]) -> Tuple[str, ...]:
+        """توقيع مبسّط للأزرار (بدون الأرقام المتغيرة) لاكتشاف الرسائل المكررة"""
+        if not msg or not msg.buttons:
+            return ()
+        sig = []
+        for row in msg.buttons:
+            for btn in row:
+                normalized = re.sub(r"\d+", "", (btn.text or "").lower()).strip()
+                sig.append(re.sub(r"\s+", " ", normalized))
+        return tuple(sig)
 
     def _serialize_msg(self, step: str, msg: Optional[Message]) -> dict:
         if not msg:
@@ -293,15 +312,26 @@ class TelegramNumberManager:
         elif target_rc is None and flat_index is None:
             return None
 
+        is_inline_click = isinstance(msg.reply_markup, ReplyInlineMarkup)
+        prev_sig = self._button_signature(msg)
+
         entity = await self._get_entity_cached(bot)
         loop = asyncio.get_running_loop()
         fut = loop.create_future()
 
         async def handler(event):
-            if getattr(event.message, "out", False) or self._is_noise_message(event.message):
+            ev_msg = event.message
+            if getattr(ev_msg, "out", False) or self._is_noise_message(ev_msg):
+                return
+            # تجاهل رسائل الكيبورد السفلي عندما نضغط على زر Inline
+            if is_inline_click and isinstance(ev_msg.reply_markup, ReplyKeyboardMarkup):
+                return
+            # تجاهل التعديلات/الرسائل المكررة التي تحمل نفس الأزرار بدون أرقام
+            new_sig = self._button_signature(ev_msg)
+            if new_sig and new_sig == prev_sig and not self._extract_phones_from_msg(ev_msg):
                 return
             if not fut.done():
-                fut.set_result(event.message)
+                fut.set_result(ev_msg)
 
         self.client.add_event_handler(handler, events.NewMessage(chats=entity))
         self.client.add_event_handler(handler, events.MessageEdited(chats=entity))
@@ -313,8 +343,6 @@ class TelegramNumberManager:
 
         click_task = asyncio.create_task(do_click())
         try:
-            # ننتظر وصول رسالة/تعديل البوت طوال كامل مهلة timeout
-            # ولا نتوقف مبكراً عند انتهاء click_task فقط
             deadline = loop.time() + timeout
             while not fut.done():
                 remaining = deadline - loop.time()
@@ -337,15 +365,17 @@ class TelegramNumberManager:
 
             res = fut.result()
 
-            # إذا كانت الرسالة مجرد "انتظر / جاري التحميل" ننتظر الرسالة الفعلية التالية
             if res and not res.buttons and not self._extract_phones_from_msg(res):
                 fut2 = loop.create_future()
 
                 async def handler2(ev):
-                    if getattr(ev.message, "out", False) or self._is_noise_message(ev.message):
+                    ev_msg = ev.message
+                    if getattr(ev_msg, "out", False) or self._is_noise_message(ev_msg):
+                        return
+                    if is_inline_click and isinstance(ev_msg.reply_markup, ReplyKeyboardMarkup):
                         return
                     if not fut2.done():
-                        fut2.set_result(ev.message)
+                        fut2.set_result(ev_msg)
 
                 self.client.add_event_handler(handler2, events.NewMessage(chats=entity))
                 self.client.add_event_handler(handler2, events.MessageEdited(chats=entity))
@@ -420,7 +450,6 @@ class TelegramNumberManager:
         if state.locked:
             return state.numbers, "هذا البوت محجوز حالياً لمستخدم آخر"
 
-        # إذا كان البوت مشغولاً بطلب سابق، ننتظر بحد أقصى 5 ثوانٍ فقط بدل التعليق
         try:
             await asyncio.wait_for(self._op_locks[bot_username].acquire(), timeout=5.0)
         except asyncio.TimeoutError:
@@ -509,7 +538,7 @@ class TelegramNumberManager:
                         msg = await self._click_and_wait(bot_username, m2, rc=branch_rc)
                         trace.append(self._serialize_msg("3: Branch", msg))
                     else:
-                        trace.append({"step": "3: Branch", "error": "No available branch (only Back button)"})
+                        trace.append({"step": "3: Branch", "error": "No available branch"})
 
             elif bot_username == "JXOTPBot":
                 target_country = "Cambodia"
