@@ -95,6 +95,7 @@ class TelegramNumberManager:
         self._op_locks: Dict[str, asyncio.Lock] = {b: asyncio.Lock() for b in BOT_USERNAMES}
         self._entities: Dict[str, Any] = {}
         self.last_errors: Dict[str, str] = {}
+        self.last_trace: Dict[str, List[dict]] = {b: [] for b in BOT_USERNAMES}
         self.authorized: bool = False
         self._listeners_registered: bool = False
         self._ready_event = asyncio.Event()
@@ -102,7 +103,6 @@ class TelegramNumberManager:
         self.http = httpx.AsyncClient(timeout=10.0)
 
     async def start(self, delay_seconds: int = 15):
-        # تأخير الاتصال بتيليجرام حتى يغلق Render النسخة القديمة أولاً فلا تُلغى الجلسة
         self._startup_task = asyncio.create_task(self._delayed_connect(delay_seconds))
 
     async def _delayed_connect(self, delay_seconds: int):
@@ -219,6 +219,20 @@ class TelegramNumberManager:
                 return True
         return False
 
+    def _serialize_msg(self, step: str, msg: Optional[Message]) -> dict:
+        if not msg:
+            return {"step": step, "error": "No response / Timeout"}
+        btns = []
+        if msg.buttons:
+            for r, row in enumerate(msg.buttons):
+                for c, btn in enumerate(row):
+                    btns.append(f"[{r},{c}] {btn.text}")
+        return {
+            "step": step,
+            "text": (msg.raw_text or "")[:200],
+            "buttons": btns[:20],
+        }
+
     def _find_button_rc(self, msg: Optional[Message], keywords: List[str]) -> Optional[Tuple[int, int]]:
         if not msg or not msg.buttons:
             return None
@@ -229,7 +243,18 @@ class TelegramNumberManager:
                         return (r_idx, c_idx)
         return None
 
-    async def _send_and_wait(self, bot: str, text: str, timeout: int = 8) -> Optional[Message]:
+    def _find_first_non_back_rc(self, msg: Optional[Message]) -> Optional[Tuple[int, int]]:
+        if not msg or not msg.buttons:
+            return None
+        for r_idx, row in enumerate(msg.buttons):
+            for c_idx, btn in enumerate(row):
+                txt = (btn.text or "").lower()
+                if "رجوع" in txt or "back" in txt or "⬅" in txt or "🔙" in txt:
+                    continue
+                return (r_idx, c_idx)
+        return None
+
+    async def _send_and_wait(self, bot: str, text: str, timeout: int = 10) -> Optional[Message]:
         entity = await self._get_entity_cached(bot)
         fut = asyncio.get_running_loop().create_future()
 
@@ -255,7 +280,7 @@ class TelegramNumberManager:
         flat_index: Optional[int] = None,
         text_contains: Optional[str] = None,
         rc: Optional[Tuple[int, int]] = None,
-        timeout: int = 9,
+        timeout: int = 10,
     ) -> Optional[Message]:
         if not msg or not msg.buttons:
             return None
@@ -269,7 +294,8 @@ class TelegramNumberManager:
             return None
 
         entity = await self._get_entity_cached(bot)
-        fut = asyncio.get_running_loop().create_future()
+        loop = asyncio.get_running_loop()
+        fut = loop.create_future()
 
         async def handler(event):
             if getattr(event.message, "out", False) or self._is_noise_message(event.message):
@@ -287,26 +313,33 @@ class TelegramNumberManager:
 
         click_task = asyncio.create_task(do_click())
         try:
-            done, _ = await asyncio.wait(
-                {click_task, fut},
-                timeout=timeout,
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-            res = None
-            if fut in done:
-                res = fut.result()
-                if not click_task.done():
-                    click_task.cancel()
-            else:
-                if not click_task.done():
-                    click_task.cancel()
-                try:
-                    res = await asyncio.wait_for(fut, timeout=4)
-                except asyncio.TimeoutError:
-                    return None
+            # ننتظر وصول رسالة/تعديل البوت طوال كامل مهلة timeout
+            # ولا نتوقف مبكراً عند انتهاء click_task فقط
+            deadline = loop.time() + timeout
+            while not fut.done():
+                remaining = deadline - loop.time()
+                if remaining <= 0:
+                    break
+                if click_task.done():
+                    try:
+                        await asyncio.wait_for(asyncio.shield(fut), timeout=remaining)
+                    except asyncio.TimeoutError:
+                        pass
+                    break
+                await asyncio.wait(
+                    {click_task, fut},
+                    timeout=remaining,
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
 
+            if not fut.done():
+                return None
+
+            res = fut.result()
+
+            # إذا كانت الرسالة مجرد "انتظر / جاري التحميل" ننتظر الرسالة الفعلية التالية
             if res and not res.buttons and not self._extract_phones_from_msg(res):
-                fut2 = asyncio.get_running_loop().create_future()
+                fut2 = loop.create_future()
 
                 async def handler2(ev):
                     if getattr(ev.message, "out", False) or self._is_noise_message(ev.message):
@@ -317,7 +350,7 @@ class TelegramNumberManager:
                 self.client.add_event_handler(handler2, events.NewMessage(chats=entity))
                 self.client.add_event_handler(handler2, events.MessageEdited(chats=entity))
                 try:
-                    res = await asyncio.wait_for(fut2, timeout=4)
+                    res = await asyncio.wait_for(fut2, timeout=5)
                 except asyncio.TimeoutError:
                     pass
                 finally:
@@ -330,6 +363,11 @@ class TelegramNumberManager:
             self.client.remove_event_handler(handler)
             if not click_task.done():
                 click_task.cancel()
+            else:
+                try:
+                    click_task.exception()
+                except Exception:
+                    pass
 
     def _extract_phones(self, text: str) -> List[str]:
         if not text:
@@ -382,93 +420,143 @@ class TelegramNumberManager:
         if state.locked:
             return state.numbers, "هذا البوت محجوز حالياً لمستخدم آخر"
 
-        async with self._op_locks[bot_username]:
-            target_country = country or "Default"
-            if (
-                not force_refresh
-                and state.active_country
-                and state.active_country.lower() == target_country.lower()
-            ):
-                available_now = [n for n in state.numbers if n.status == "AVAILABLE"]
-                if available_now:
-                    return available_now, None
+        # إذا كان البوت مشغولاً بطلب سابق، ننتظر بحد أقصى 5 ثوانٍ فقط بدل التعليق
+        try:
+            await asyncio.wait_for(self._op_locks[bot_username].acquire(), timeout=5.0)
+        except asyncio.TimeoutError:
+            return [], "البوت مشغول بطلب آخر حالياً، حاول بعد ثوانٍ"
 
-            self.last_errors.pop(bot_username, None)
-            msg = None
+        try:
+            return await asyncio.wait_for(
+                self._fetch_from_bot_locked(bot_username, country, force_refresh, max_retries),
+                timeout=22.0,
+            )
+        except asyncio.TimeoutError:
+            err = "انتهت مهلة استجابة البوت، حاول مجدداً"
+            self.last_errors[bot_username] = err
+            return [], err
+        finally:
+            self._op_locks[bot_username].release()
 
-            try:
-                if bot_username == "B_M_Numbers_Files_bot":
-                    target_country = "Yemen"
-                    m1 = await self._send_and_wait(bot_username, "/getnumber")
-                    m2 = await self._click_and_wait(bot_username, m1, text_contains="whats") if m1 else None
-                    msg = await self._click_and_wait(bot_username, m2, text_contains="yemen") if m2 else None
+    async def _fetch_from_bot_locked(
+        self,
+        bot_username: str,
+        country: Optional[str],
+        force_refresh: bool,
+        max_retries: int,
+    ) -> Tuple[List[NumberItem], Optional[str]]:
+        state = self.bots[bot_username]
+        target_country = country or "Default"
 
-                elif bot_username == "smslybot":
-                    target_country = country or "Egypt"
-                    m1 = await self._send_and_wait(bot_username, "Get Number")
-                    m2 = await self._click_and_wait(bot_username, m1, text_contains="WhatsApp") if m1 else None
-                    msg = await self._click_and_wait(bot_username, m2, text_contains=target_country) if m2 else None
+        if (
+            not force_refresh
+            and state.active_country
+            and state.active_country.lower() == target_country.lower()
+        ):
+            available_now = [n for n in state.numbers if n.status == "AVAILABLE"]
+            if available_now:
+                return available_now, None
 
-                elif bot_username == "SOJIB_BRO_FRESH_NUMBER_BOT":
-                    target_country = country or "Pakistan"
-                    m1 = await self._send_and_wait(bot_username, "/start")
-                    m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Number") if m1 else None
-                    m3 = await self._click_and_wait(bot_username, m2, text_contains="whatsapp") if m2 else None
-                    msg = await self._click_and_wait(bot_username, m3, text_contains=target_country) if m3 else None
+        self.last_errors.pop(bot_username, None)
+        trace: List[dict] = []
+        self.last_trace[bot_username] = trace
+        msg = None
 
-                elif bot_username == "NumberNest_2_Bot":
-                    target_country = country or "Italy"
-                    m1 = await self._send_and_wait(bot_username, "/start")
-                    if m1 and self._find_button_rc(m1, ["Get Number"]):
-                        m1 = await self._click_and_wait(bot_username, m1, text_contains="Get Number")
-                    m2 = await self._click_and_wait(bot_username, m1, text_contains=target_country) if m1 else None
-                    if m2 and self._extract_phones_from_msg(m2):
-                        msg = m2
-                    elif m2:
-                        msg = await self._click_and_wait(bot_username, m2, flat_index=0)
+        try:
+            if bot_username == "B_M_Numbers_Files_bot":
+                target_country = "Yemen"
+                m1 = await self._send_and_wait(bot_username, "/getnumber")
+                trace.append(self._serialize_msg("1: /getnumber", m1))
+                m2 = await self._click_and_wait(bot_username, m1, text_contains="whats") if m1 else None
+                trace.append(self._serialize_msg("2: WhatsApp", m2))
+                msg = await self._click_and_wait(bot_username, m2, text_contains="yemen") if m2 else None
+                trace.append(self._serialize_msg("3: Yemen", msg))
 
-                elif bot_username == "JXOTPBot":
-                    target_country = "Cambodia"
-                    m1 = await self._send_and_wait(bot_username, "/start")
-                    m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Numbers") if m1 else None
-                    m3 = await self._click_and_wait(bot_username, m2, text_contains="whats") if m2 else None
-                    msg = await self._click_and_wait(bot_username, m3, text_contains="cambodia") if m3 else None
+            elif bot_username == "smslybot":
+                target_country = country or "Egypt"
+                m1 = await self._send_and_wait(bot_username, "Get Number")
+                trace.append(self._serialize_msg("1: Get Number", m1))
+                m2 = await self._click_and_wait(bot_username, m1, text_contains="WhatsApp") if m1 else None
+                trace.append(self._serialize_msg("2: WhatsApp", m2))
+                msg = await self._click_and_wait(bot_username, m2, text_contains=target_country) if m2 else None
+                trace.append(self._serialize_msg(f"3: {target_country}", msg))
 
-            except FloodWaitError as e:
-                err = f"تيليجرام طلب الانتظار {e.seconds} ثانية قبل الطلب مجدداً"
-                self.last_errors[bot_username] = err
-                return [], err
-            except Exception as e:
-                err = f"{type(e).__name__}: {e}"
-                self.last_errors[bot_username] = err
-                return [], str(e) if "جلسة تيليجرام" in str(e) else "تعذر الاتصال ببوت الأرقام حالياً، حاول مرة أخرى"
+            elif bot_username == "SOJIB_BRO_FRESH_NUMBER_BOT":
+                target_country = country or "Pakistan"
+                m1 = await self._send_and_wait(bot_username, "/start")
+                trace.append(self._serialize_msg("1: /start", m1))
+                m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Number") if m1 else None
+                trace.append(self._serialize_msg("2: Get Number", m2))
+                m3 = await self._click_and_wait(bot_username, m2, text_contains="whatsapp") if m2 else None
+                trace.append(self._serialize_msg("3: WHATSAPP", m3))
+                msg = await self._click_and_wait(bot_username, m3, text_contains=target_country) if m3 else None
+                trace.append(self._serialize_msg(f"4: {target_country}", msg))
 
+            elif bot_username == "NumberNest_2_Bot":
+                target_country = country or "Italy"
+                m1 = await self._send_and_wait(bot_username, "/start")
+                trace.append(self._serialize_msg("1: /start", m1))
+                if m1 and self._find_button_rc(m1, ["Get Number"]):
+                    m1 = await self._click_and_wait(bot_username, m1, text_contains="Get Number")
+                    trace.append(self._serialize_msg("1b: Get Number", m1))
+                m2 = await self._click_and_wait(bot_username, m1, text_contains=target_country) if m1 else None
+                trace.append(self._serialize_msg(f"2: {target_country}", m2))
+                if m2 and self._extract_phones_from_msg(m2):
+                    msg = m2
+                elif m2:
+                    branch_rc = self._find_first_non_back_rc(m2)
+                    if branch_rc:
+                        msg = await self._click_and_wait(bot_username, m2, rc=branch_rc)
+                        trace.append(self._serialize_msg("3: Branch", msg))
+                    else:
+                        trace.append({"step": "3: Branch", "error": "No available branch (only Back button)"})
+
+            elif bot_username == "JXOTPBot":
+                target_country = "Cambodia"
+                m1 = await self._send_and_wait(bot_username, "/start")
+                trace.append(self._serialize_msg("1: /start", m1))
+                m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Numbers") if m1 else None
+                trace.append(self._serialize_msg("2: Get Numbers", m2))
+                m3 = await self._click_and_wait(bot_username, m2, text_contains="whats") if m2 else None
+                trace.append(self._serialize_msg("3: WhatsApp", m3))
+                msg = await self._click_and_wait(bot_username, m3, text_contains="cambodia") if m3 else None
+                trace.append(self._serialize_msg("4: Cambodia", msg))
+
+        except FloodWaitError as e:
+            err = f"تيليجرام طلب الانتظار {e.seconds} ثانية قبل الطلب مجدداً"
+            self.last_errors[bot_username] = err
+            return [], err
+        except Exception as e:
+            err = f"{type(e).__name__}: {e}"
+            self.last_errors[bot_username] = err
+            return [], str(e) if "جلسة تيليجرام" in str(e) else "تعذر الاتصال ببوت الأرقام حالياً، حاول مرة أخرى"
+
+        if not msg:
+            err = "الدولة غير متوفرة حالياً في هذا البوت أو لم يستجب البوت"
+            self.last_errors[bot_username] = err
+            return [], err
+
+        fresh_items: List[NumberItem] = []
+        for _ in range(max_retries):
+            phones = self._extract_phones_from_msg(msg)
+            fresh_items = await self._filter_fresh_numbers(phones, target_country, bot_username)
+            if fresh_items:
+                break
+            change_rc = self._find_button_rc(
+                msg, ["change number", "تغيير الرقم", "تغيير", "رقم جديد", "new number"]
+            )
+            if not change_rc:
+                break
+            msg = await self._click_and_wait(bot_username, msg, rc=change_rc)
             if not msg:
-                err = "الدولة غير متوفرة حالياً في هذا البوت أو لم يستجب البوت"
-                self.last_errors[bot_username] = err
-                return [], err
+                break
 
-            fresh_items: List[NumberItem] = []
-            for _ in range(max_retries):
-                phones = self._extract_phones_from_msg(msg)
-                fresh_items = await self._filter_fresh_numbers(phones, target_country, bot_username)
-                if fresh_items:
-                    break
-                change_rc = self._find_button_rc(
-                    msg, ["change number", "تغيير الرقم", "تغيير", "رقم جديد", "new number"]
-                )
-                if not change_rc:
-                    break
-                msg = await self._click_and_wait(bot_username, msg, rc=change_rc)
-                if not msg:
-                    break
-
-            state.active_country = target_country
-            state.numbers = fresh_items
-            state.last_message_id = msg.id if msg else None
-            if not fresh_items:
-                return [], "لم تتوفر أرقام جديدة حالياً لهذه الدولة"
-            return fresh_items, None
+        state.active_country = target_country
+        state.numbers = fresh_items
+        state.last_message_id = msg.id if msg else None
+        if not fresh_items:
+            return [], "لم تتوفر أرقام جديدة حالياً لهذه الدولة"
+        return fresh_items, None
 
     def reserve_number(self, phone: str, user_id: str) -> Optional[NumberItem]:
         self._cleanup_expired_locks()
