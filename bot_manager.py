@@ -69,6 +69,36 @@ COUNTRIES_CATALOG = [
 ]
 
 
+COUNTRY_ALIASES: Dict[str, List[str]] = {
+    "yemen": ["yemen", "اليمن"],
+    "sudan": ["sudan", "السودان"],
+    "pakistan": ["pakistan", "باكستان"],
+    "cambodia": ["cambodia", "كمبوديا"],
+    "egypt": ["egypt", "مصر"],
+    "syria": ["syria", "سوريا"],
+    "lebanon": ["lebanon", "لبنان"],
+    "italy": ["italy", "إيطاليا", "ايطاليا"],
+    "ethiopia": ["ethiopia", "إثيوبيا", "اثيوبيا"],
+    "malaysia": ["malaysia", "ماليزيا"],
+    "mali": ["mali", "مالي"],
+    "ukraine": ["ukraine", "أوكرانيا", "اوكرانيا"],
+    "uzbekistan": ["uzbekistan", "أوزبكستان", "اوزبكستان"],
+    "vietnam": ["vietnam", "فيتنام"],
+    "russia": ["russia", "روسيا"],
+    "georgia": ["georgia", "جورجيا"],
+    "bolivia": ["bolivia", "بوليفيا"],
+    "cuba": ["cuba", "كوبا"],
+    "venezuela": ["venezuela", "فنزويلا"],
+    "guinea": ["guinea", "غينيا"],
+    "laos": ["laos", "لاوس"],
+    "maldives": ["maldives", "المالديف"],
+    "senegal": ["senegal", "السنغال"],
+    "timor leste": ["timor", "تيمور"],
+    "togo": ["togo", "توغو"],
+    "zambia": ["zambia", "زامبيا"],
+}
+
+
 @dataclass
 class NumberItem:
     phone: str
@@ -255,10 +285,19 @@ class TelegramNumberManager:
     def _find_button_rc(self, msg: Optional[Message], keywords: List[str]) -> Optional[Tuple[int, int]]:
         if not msg or not msg.buttons:
             return None
+        expanded = list(keywords)
         for kw in keywords:
+            aliases = COUNTRY_ALIASES.get(kw.lower(), [])
+            expanded.extend(aliases)
+
+        for kw in expanded:
+            kw_clean = kw.strip().lower()
+            if not kw_clean:
+                continue
             for r_idx, row in enumerate(msg.buttons):
                 for c_idx, btn in enumerate(row):
-                    if kw.lower() in (btn.text or "").lower():
+                    btn_text = (btn.text or "").strip().lower()
+                    if kw_clean in btn_text:
                         return (r_idx, c_idx)
         return None
 
@@ -273,6 +312,13 @@ class TelegramNumberManager:
                 return (r_idx, c_idx)
         return None
 
+    async def _safe_reset_bot(self, bot_username: str):
+        try:
+            entity = await self._get_entity_cached(bot_username)
+            await self.client.send_message(entity, "/start")
+        except Exception:
+            pass
+
     async def _send_and_wait(self, bot: str, text: str, timeout: int = 10) -> Optional[Message]:
         entity = await self._get_entity_cached(bot)
         fut = asyncio.get_running_loop().create_future()
@@ -284,6 +330,7 @@ class TelegramNumberManager:
                 fut.set_result(event.message)
 
         self.client.add_event_handler(handler, events.NewMessage(chats=entity))
+        self.client.add_event_handler(handler, events.MessageEdited(chats=entity))
         try:
             await self.client.send_message(entity, text)
             return await asyncio.wait_for(fut, timeout=timeout)
@@ -307,6 +354,17 @@ class TelegramNumberManager:
         target_rc = rc
         if target_rc is None and text_contains:
             target_rc = self._find_button_rc(msg, [text_contains])
+            # If not found on current page, check for Next / >> pagination button
+            if not target_rc:
+                next_rc = self._find_button_rc(msg, ["next", ">>", "التالي", "➡️", ">"])
+                if next_rc:
+                    try:
+                        p2 = await msg.click(next_rc[0], next_rc[1])
+                        if p2 and p2.buttons:
+                            msg = p2
+                            target_rc = self._find_button_rc(msg, [text_contains])
+                    except Exception:
+                        pass
             if not target_rc:
                 return None
         elif target_rc is None and flat_index is None:
@@ -561,6 +619,7 @@ class TelegramNumberManager:
             return [], str(e) if "جلسة تيليجرام" in str(e) else "تعذر الاتصال ببوت الأرقام حالياً، حاول مرة أخرى"
 
         if not msg:
+            asyncio.create_task(self._safe_reset_bot(bot_username))
             err = "الدولة غير متوفرة حالياً في هذا البوت أو لم يستجب البوت"
             self.last_errors[bot_username] = err
             return [], err
