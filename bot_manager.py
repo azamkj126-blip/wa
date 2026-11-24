@@ -549,7 +549,7 @@ class TelegramNumberManager:
                 m3 = await self._click_and_wait(bot_username, m2, text_contains="whats") if m2 else None
                 trace.append(self._serialize_msg("3: WhatsApp", m3))
                 msg = await self._click_and_wait(bot_username, m3, text_contains="cambodia") if m3 else None
-                trace.append(self._serialize_msg("4: Cambodia", msg))
+                trace.append(self._serialize_msg(f"4: {target_country}", msg))
 
         except FloodWaitError as e:
             err = f"تيليجرام طلب الانتظار {e.seconds} ثانية قبل الطلب مجدداً"
