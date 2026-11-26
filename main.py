@@ -104,6 +104,9 @@ async def reserve_number(req: ReserveRequest):
 async def check_otp(phone: str):
     if not phone.startswith("+"):
         phone = "+" + phone
+    if phone in manager.completed_otps:
+        data = manager.completed_otps[phone]
+        return {"phone": data["phone"], "status": data["status"], "otp": data["otp"]}
     for state in manager.bots.values():
         for item in state.numbers:
             if item.phone == phone:

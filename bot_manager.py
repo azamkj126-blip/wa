@@ -263,6 +263,7 @@ class TelegramNumberManager:
         self._scanner_task: Optional[asyncio.Task] = None
         self.http = httpx.AsyncClient(timeout=10.0)
         self._discovered_countries: Dict[str, List[dict]] = {b: [] for b in BOT_USERNAMES}
+        self.completed_otps: Dict[str, dict] = {}
 
     async def start(self, delay_seconds: int = 15):
         self._startup_task = asyncio.create_task(self._delayed_connect(delay_seconds))
@@ -475,17 +476,32 @@ class TelegramNumberManager:
 
                 for item in active_items:
                     last4 = re.sub(r"\D", "", item.phone)[-4:]
+                    matched = False
                     if last4 in cleaned_digits_pool:
+                        matched = True
+                    elif chat_username and chat_username == item.bot_username.lower():
+                        if not self._is_noise_message(event.message):
+                            matched = True
+
+                    if matched:
                         item.otp_code = clean_otp
                         item.status = "COMPLETED"
-                        print(f"OTP matched for {item.phone} (last4={last4}): {clean_otp}")
+                        self.completed_otps[item.phone] = {
+                            "phone": item.phone,
+                            "status": "COMPLETED",
+                            "otp": clean_otp,
+                            "bot": item.bot_username,
+                            "completed_at": time.time(),
+                        }
+                        # Immediately release bot lock so its countries reappear in the app
+                        bot_state = self.bots.get(item.bot_username)
+                        if bot_state:
+                            bot_state.locked = False
+                            bot_state.locked_at = 0.0
+                            bot_state.active_country = None
+                            print(f"OTP received for {item.phone}! Bot {item.bot_username} unlocked immediately.")
+                            asyncio.create_task(self._safe_reset_bot(item.bot_username))
                         return
-                    if chat_username and chat_username == item.bot_username.lower():
-                        if not self._is_noise_message(event.message):
-                            item.otp_code = clean_otp
-                            item.status = "COMPLETED"
-                            print(f"Direct bot OTP matched for {item.phone}: {clean_otp}")
-                            return
             except Exception:
                 pass
 
@@ -1016,3 +1032,10 @@ class TelegramNumberManager:
                     state.locked_at = 0.0
                     state.active_country = None
                     state.numbers = []
+
+        expired_phones = [
+            p for p, data in self.completed_otps.items()
+            if (now - data.get("completed_at", now)) > 1800
+        ]
+        for p in expired_phones:
+            self.completed_otps.pop(p, None)
