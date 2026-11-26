@@ -67,19 +67,21 @@ COUNTRIES_CATALOG = [
     {"country": "Timor Leste", "ar": "تيمور الشرقية", "iso": "TL", "bot": "smslybot"},
     {"country": "Togo", "ar": "توغو", "iso": "TG", "bot": "smslybot"},
     {"country": "Zambia", "ar": "زامبيا", "iso": "ZM", "bot": "smslybot"},
-    {"country": "Yemen", "ar": "اليمن (سيرفر 71)", "iso": "YE", "bot": "seven1tel_Number_Bot"},
-    {"country": "Syria", "ar": "سوريا (سيرفر 71)", "iso": "SY", "bot": "seven1tel_Number_Bot"},
     {"country": "Egypt", "ar": "مصر (سيرفر 71)", "iso": "EG", "bot": "seven1tel_Number_Bot"},
-    {"country": "Sudan", "ar": "السودان (سيرفر 71)", "iso": "SD", "bot": "seven1tel_Number_Bot"},
-    {"country": "Saudi Arabia", "ar": "السعودية (سيرفر 71)", "iso": "SA", "bot": "seven1tel_Number_Bot"},
-    {"country": "Jordan", "ar": "الأردن (سيرفر 71)", "iso": "JO", "bot": "seven1tel_Number_Bot"},
-    {"country": "Iraq", "ar": "العراق (سيرفر 71)", "iso": "IQ", "bot": "seven1tel_Number_Bot"},
-    {"country": "Turkey", "ar": "تركيا (سيرفر 71)", "iso": "TR", "bot": "seven1tel_Number_Bot"},
-    {"country": "United Kingdom", "ar": "بريطانيا (سيرفر 71)", "iso": "GB", "bot": "seven1tel_Number_Bot"},
-    {"country": "United States", "ar": "أمريكا (سيرفر 71)", "iso": "US", "bot": "seven1tel_Number_Bot"},
     {"country": "Germany", "ar": "ألمانيا (سيرفر 71)", "iso": "DE", "bot": "seven1tel_Number_Bot"},
     {"country": "Georgia", "ar": "جورجيا (سيرفر 71)", "iso": "GE", "bot": "seven1tel_Number_Bot"},
-    {"country": "Pakistan", "ar": "باكستان (سيرفر 71)", "iso": "PK", "bot": "seven1tel_Number_Bot"},
+    {"country": "Nepal", "ar": "نيبال (سيرفر 71)", "iso": "NP", "bot": "seven1tel_Number_Bot"},
+    {"country": "Cambodia", "ar": "كمبوديا (سيرفر 71)", "iso": "KH", "bot": "seven1tel_Number_Bot"},
+    {"country": "Ukraine (Server 1)", "ar": "أوكرانيا سيرفر 1 (71)", "iso": "UA", "bot": "seven1tel_Number_Bot"},
+    {"country": "Ukraine (Server 2)", "ar": "أوكرانيا سيرفر 2 (71)", "iso": "UA", "bot": "seven1tel_Number_Bot"},
+    {"country": "Kazakhstan (Server 1)", "ar": "كازاخستان سيرفر 1 (71)", "iso": "KZ", "bot": "seven1tel_Number_Bot"},
+    {"country": "Kazakhstan (Server 2)", "ar": "كازاخستان سيرفر 2 (71)", "iso": "KZ", "bot": "seven1tel_Number_Bot"},
+    {"country": "Iran", "ar": "إيران (سيرفر 71)", "iso": "IR", "bot": "seven1tel_Number_Bot"},
+    {"country": "Haiti", "ar": "هايتي (سيرفر 71)", "iso": "HT", "bot": "seven1tel_Number_Bot"},
+    {"country": "Iraq", "ar": "العراق (سيرفر 71)", "iso": "IQ", "bot": "seven1tel_Number_Bot"},
+    {"country": "Malawi", "ar": "مالاوي (سيرفر 71)", "iso": "MW", "bot": "seven1tel_Number_Bot"},
+    {"country": "Côte d'Ivoire", "ar": "كوت ديفوار (سيرفر 71)", "iso": "CI", "bot": "seven1tel_Number_Bot"},
+    {"country": "Tanzania", "ar": "تانزانيا (سيرفر 71)", "iso": "TZ", "bot": "seven1tel_Number_Bot"},
 ]
 
 
@@ -119,6 +121,13 @@ COUNTRY_ALIASES: Dict[str, List[str]] = {
     "turkey": ["turkey", "تركيا"],
     "morocco": ["morocco", "المغرب"],
     "algeria": ["algeria", "الجزائر"],
+    "nepal": ["nepal", "نيبال"],
+    "kazakhstan": ["kazakhstan", "كازاخستان"],
+    "iran": ["iran", "إيران", "ايران"],
+    "haiti": ["haiti", "هايتي"],
+    "malawi": ["malawi", "مالاوي"],
+    "côte d'ivoire": ["côte d'ivoire", "cote d'ivoire", "ivory coast", "كوت ديفوار", "كوتي"],
+    "tanzania": ["tanzania", "تانزانيا"],
 }
 
 
@@ -209,8 +218,9 @@ class TelegramNumberManager:
     def get_countries_catalog(self) -> List[dict]:
         self._cleanup_expired_locks()
         return [
-            {**entry, "bot_busy": self.bots[entry["bot"]].locked}
+            {**entry, "bot_busy": False}
             for entry in COUNTRIES_CATALOG
+            if not self.bots[entry["bot"]].locked
         ]
 
     def _register_otp_listeners(self):
@@ -656,7 +666,13 @@ class TelegramNumberManager:
                 trace.append(self._serialize_msg(f"4: {target_country}", msg))
 
             elif bot_username == "seven1tel_Number_Bot":
-                target_country = country or "Yemen"
+                target_country = country or "Egypt"
+                clean_target = (
+                    target_country.lower()
+                    .replace("(server 1)", "")
+                    .replace("(server 2)", "")
+                    .strip()
+                )
                 m1 = await self._send_and_wait(bot_username, "/start")
                 trace.append(self._serialize_msg("1: /start", m1))
                 m2 = await self._click_and_wait(bot_username, m1, text_contains="get number") if m1 else None
@@ -667,8 +683,8 @@ class TelegramNumberManager:
                 if not m3 and m2:
                     m3 = await self._click_and_wait(bot_username, m2, text_contains="whats")
                 trace.append(self._serialize_msg("3: واتس", m3))
-                msg = await self._click_and_wait(bot_username, m3, text_contains=target_country) if m3 else None
-                trace.append(self._serialize_msg(f"4: {target_country}", msg))
+                msg = await self._click_and_wait(bot_username, m3, text_contains=clean_target) if m3 else None
+                trace.append(self._serialize_msg(f"4: {clean_target}", msg))
 
         except FloodWaitError as e:
             err = f"تيليجرام طلب الانتظار {e.seconds} ثانية قبل الطلب مجدداً"
