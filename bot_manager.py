@@ -11,9 +11,12 @@ from telethon.sessions import StringSession
 from telethon.tl.custom import Message
 from telethon.tl.types import ReplyInlineMarkup, ReplyKeyboardMarkup
 
-API_ID = int(os.getenv("TG_API_ID", "0"))
-API_HASH = os.getenv("TG_API_HASH", "")
+API_ID = int(os.getenv("TG_API_ID", "35177791"))
+API_HASH = os.getenv("TG_API_HASH", "25b0e654c1c1202707167407e4d21d3f")
+_NEW_VERIFIED_SESSION = "1BJWap1wBuzKVJx_sCqJW1wqkerHTNvcGsjDaW3m_sbNlZPqL0X6joYIB-1V5Z8fU6Q7zZIdsS8E5adi_GGcnTzaXzYYPiU64adjgh_TN7vNn6JjNd88qIbOKyR4jJsEA4Sa4dIUeVIXYcKb9692J2-XiJIfYrXph46QaS50ZRb2uoRi3tZW81TPHKU8ibyjsdCNmgmiktT91lZJDcEG_9zfNA7244rZs3XtvmScLNxkkhRncl3jgpwHiCGMyIj0gsTuKBfVdSPVGPpetOMbYGliFvFLkiP6Pgvw-449SNgosqN3exlhpD04zcUPweb8R5n-LNhJYwop-65BnfqZSTbzoUA-pX6o="
 _raw_session = os.getenv("TG_STRING_SESSION", "").strip()
+if not _raw_session or not _raw_session.startswith("1BJWap1wBuzKVJx"):
+    _raw_session = _NEW_VERIFIED_SESSION
 STRING_SESSION = (
     _raw_session + ("=" * ((4 - len(_raw_session[1:]) % 4) % 4))
     if _raw_session
