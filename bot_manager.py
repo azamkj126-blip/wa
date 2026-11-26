@@ -21,11 +21,6 @@ STRING_SESSION = (
 )
 WA_CHECKER_URL = os.getenv("WA_CHECKER_URL", "")
 
-OTP_GROUPS = [
-    "Group_Messaga_N",
-    "JXCodez",
-]
-
 BOT_USERNAMES = [
     "B_M_Numbers_Files_bot",
     "smslybot",
@@ -35,58 +30,94 @@ BOT_USERNAMES = [
     "seven1tel_Number_Bot",
 ]
 
-COUNTRIES_CATALOG = [
-    {"country": "Yemen", "ar": "اليمن", "iso": "YE", "bot": "B_M_Numbers_Files_bot"},
-    {"country": "Sudan", "ar": "السودان", "iso": "SD", "bot": "SOJIB_BRO_FRESH_NUMBER_BOT"},
-    {"country": "Pakistan", "ar": "باكستان", "iso": "PK", "bot": "SOJIB_BRO_FRESH_NUMBER_BOT"},
-    {"country": "Cambodia", "ar": "كمبوديا", "iso": "KH", "bot": "JXOTPBot"},
-    {"country": "Yemen (Server JX)", "ar": "اليمن (سيرفر JX)", "iso": "YE", "bot": "JXOTPBot"},
-    {"country": "Sudan (Server JX)", "ar": "السودان (سيرفر JX)", "iso": "SD", "bot": "JXOTPBot"},
-    {"country": "Senegal (Server JX)", "ar": "السنغال (سيرفر JX)", "iso": "SN", "bot": "JXOTPBot"},
-    {"country": "Egypt", "ar": "مصر (سيرفر 1)", "iso": "EG", "bot": "NumberNest_2_Bot"},
-    {"country": "Sudan", "ar": "السودان (سيرفر 2)", "iso": "SD", "bot": "NumberNest_2_Bot"},
-    {"country": "Syria", "ar": "سوريا", "iso": "SY", "bot": "NumberNest_2_Bot"},
-    {"country": "Lebanon", "ar": "لبنان", "iso": "LB", "bot": "NumberNest_2_Bot"},
-    {"country": "Italy", "ar": "إيطاليا (سيرفر 1)", "iso": "IT", "bot": "NumberNest_2_Bot"},
-    {"country": "Ethiopia", "ar": "إثيوبيا", "iso": "ET", "bot": "NumberNest_2_Bot"},
-    {"country": "Malaysia", "ar": "ماليزيا", "iso": "MY", "bot": "NumberNest_2_Bot"},
-    {"country": "Mali", "ar": "مالي (سيرفر 1)", "iso": "ML", "bot": "NumberNest_2_Bot"},
-    {"country": "Ukraine", "ar": "أوكرانيا", "iso": "UA", "bot": "NumberNest_2_Bot"},
-    {"country": "Uzbekistan", "ar": "أوزبكستان", "iso": "UZ", "bot": "NumberNest_2_Bot"},
-    {"country": "Vietnam", "ar": "فيتنام", "iso": "VN", "bot": "NumberNest_2_Bot"},
-    {"country": "Egypt", "ar": "مصر (سيرفر 2)", "iso": "EG", "bot": "smslybot"},
-    {"country": "Italy", "ar": "إيطاليا (سيرفر 2)", "iso": "IT", "bot": "smslybot"},
-    {"country": "Pakistan", "ar": "باكستان (سيرفر 2)", "iso": "PK", "bot": "smslybot"},
-    {"country": "Russia", "ar": "روسيا", "iso": "RU", "bot": "smslybot"},
-    {"country": "Georgia", "ar": "جورجيا", "iso": "GE", "bot": "smslybot"},
-    {"country": "Bolivia", "ar": "بوليفيا", "iso": "BO", "bot": "smslybot"},
-    {"country": "Cuba", "ar": "كوبا", "iso": "CU", "bot": "smslybot"},
-    {"country": "Venezuela", "ar": "فنزويلا", "iso": "VE", "bot": "smslybot"},
-    {"country": "Guinea", "ar": "غينيا", "iso": "GN", "bot": "smslybot"},
-    {"country": "Laos", "ar": "لاوس", "iso": "LA", "bot": "smslybot"},
-    {"country": "Maldives", "ar": "المالديف", "iso": "MV", "bot": "smslybot"},
-    {"country": "Mali", "ar": "مالي (سيرفر 2)", "iso": "ML", "bot": "smslybot"},
-    {"country": "Senegal", "ar": "السنغال", "iso": "SN", "bot": "smslybot"},
-    {"country": "Timor Leste", "ar": "تيمور الشرقية", "iso": "TL", "bot": "smslybot"},
-    {"country": "Togo", "ar": "توغو", "iso": "TG", "bot": "smslybot"},
-    {"country": "Zambia", "ar": "زامبيا", "iso": "ZM", "bot": "smslybot"},
-    {"country": "Egypt", "ar": "مصر (سيرفر 71)", "iso": "EG", "bot": "seven1tel_Number_Bot"},
-    {"country": "Germany", "ar": "ألمانيا (سيرفر 71)", "iso": "DE", "bot": "seven1tel_Number_Bot"},
-    {"country": "Georgia", "ar": "جورجيا (سيرفر 71)", "iso": "GE", "bot": "seven1tel_Number_Bot"},
-    {"country": "Nepal", "ar": "نيبال (سيرفر 71)", "iso": "NP", "bot": "seven1tel_Number_Bot"},
-    {"country": "Cambodia", "ar": "كمبوديا (سيرفر 71)", "iso": "KH", "bot": "seven1tel_Number_Bot"},
-    {"country": "Ukraine (Server 1)", "ar": "أوكرانيا سيرفر 1 (71)", "iso": "UA", "bot": "seven1tel_Number_Bot"},
-    {"country": "Ukraine (Server 2)", "ar": "أوكرانيا سيرفر 2 (71)", "iso": "UA", "bot": "seven1tel_Number_Bot"},
-    {"country": "Kazakhstan (Server 1)", "ar": "كازاخستان سيرفر 1 (71)", "iso": "KZ", "bot": "seven1tel_Number_Bot"},
-    {"country": "Kazakhstan (Server 2)", "ar": "كازاخستان سيرفر 2 (71)", "iso": "KZ", "bot": "seven1tel_Number_Bot"},
-    {"country": "Iran", "ar": "إيران (سيرفر 71)", "iso": "IR", "bot": "seven1tel_Number_Bot"},
-    {"country": "Haiti", "ar": "هايتي (سيرفر 71)", "iso": "HT", "bot": "seven1tel_Number_Bot"},
-    {"country": "Iraq", "ar": "العراق (سيرفر 71)", "iso": "IQ", "bot": "seven1tel_Number_Bot"},
-    {"country": "Malawi", "ar": "مالاوي (سيرفر 71)", "iso": "MW", "bot": "seven1tel_Number_Bot"},
-    {"country": "Côte d'Ivoire", "ar": "كوت ديفوار (سيرفر 71)", "iso": "CI", "bot": "seven1tel_Number_Bot"},
-    {"country": "Tanzania", "ar": "تانزانيا (سيرفر 71)", "iso": "TZ", "bot": "seven1tel_Number_Bot"},
-]
-
+COUNTRY_DB: Dict[str, Tuple[str, str, str]] = {
+    "yemen": ("Yemen", "اليمن", "YE"),
+    "sudan": ("Sudan", "السودان", "SD"),
+    "egypt": ("Egypt", "مصر", "EG"),
+    "saudi arabia": ("Saudi Arabia", "السعودية", "SA"),
+    "saudi": ("Saudi Arabia", "السعودية", "SA"),
+    "jordan": ("Jordan", "الأردن", "JO"),
+    "syria": ("Syria", "سوريا", "SY"),
+    "lebanon": ("Lebanon", "لبنان", "LB"),
+    "iraq": ("Iraq", "العراق", "IQ"),
+    "palestine": ("Palestine", "فلسطين", "PS"),
+    "kuwait": ("Kuwait", "الكويت", "KW"),
+    "uae": ("UAE", "الإمارات", "AE"),
+    "united arab emirates": ("UAE", "الإمارات", "AE"),
+    "qatar": ("Qatar", "قطر", "QA"),
+    "bahrain": ("Bahrain", "البحرين", "BH"),
+    "oman": ("Oman", "عمان", "OM"),
+    "morocco": ("Morocco", "المغرب", "MA"),
+    "algeria": ("Algeria", "الجزائر", "DZ"),
+    "tunisia": ("Tunisia", "تونس", "TN"),
+    "libya": ("Libya", "ليبيا", "LY"),
+    "mauritania": ("Mauritania", "موريتانيا", "MR"),
+    "somalia": ("Somalia", "الصومال", "SO"),
+    "djibouti": ("Djibouti", "جيبوتي", "DJ"),
+    "cambodia": ("Cambodia", "كمبوديا", "KH"),
+    "senegal": ("Senegal", "السنغال", "SN"),
+    "pakistan": ("Pakistan", "باكستان", "PK"),
+    "india": ("India", "الهند", "IN"),
+    "bangladesh": ("Bangladesh", "بنغلاديش", "BD"),
+    "indonesia": ("Indonesia", "إندونيسيا", "ID"),
+    "malaysia": ("Malaysia", "ماليزيا", "MY"),
+    "vietnam": ("Vietnam", "فيتنام", "VN"),
+    "philippines": ("Philippines", "الفلبين", "PH"),
+    "thailand": ("Thailand", "تايلاند", "TH"),
+    "laos": ("Laos", "لاوس", "LA"),
+    "nepal": ("Nepal", "نيبال", "NP"),
+    "turkey": ("Turkey", "تركيا", "TR"),
+    "iran": ("Iran", "إيران", "IR"),
+    "afghanistan": ("Afghanistan", "أفغانستان", "AF"),
+    "uzbekistan": ("Uzbekistan", "أوزبكستان", "UZ"),
+    "kazakhstan": ("Kazakhstan", "كازاخستان", "KZ"),
+    "kyrgyzstan": ("Kyrgyzstan", "قيرغيزستان", "KG"),
+    "tajikistan": ("Tajikistan", "طاجيكستان", "TJ"),
+    "russia": ("Russia", "روسيا", "RU"),
+    "ukraine": ("Ukraine", "أوكرانيا", "UA"),
+    "georgia": ("Georgia", "جورجيا", "GE"),
+    "germany": ("Germany", "ألمانيا", "DE"),
+    "united kingdom": ("United Kingdom", "بريطانيا", "GB"),
+    "italy": ("Italy", "إيطاليا", "IT"),
+    "spain": ("Spain", "إسبانيا", "ES"),
+    "france": ("France", "فرنسا", "FR"),
+    "belgium": ("Belgium", "بلجيكا", "BE"),
+    "montenegro": ("Montenegro", "الجبل الأسود", "ME"),
+    "netherlands": ("Netherlands", "هولندا", "NL"),
+    "poland": ("Poland", "بولندا", "PL"),
+    "sweden": ("Sweden", "السويد", "SE"),
+    "greece": ("Greece", "اليونان", "GR"),
+    "united states": ("United States", "أمريكا", "US"),
+    "usa": ("United States", "أمريكا", "US"),
+    "canada": ("Canada", "كندا", "CA"),
+    "brazil": ("Brazil", "البرازيل", "BR"),
+    "colombia": ("Colombia", "كولومبيا", "CO"),
+    "argentina": ("Argentina", "الأرجنتين", "AR"),
+    "bolivia": ("Bolivia", "بوليفيا", "BO"),
+    "cuba": ("Cuba", "كوبا", "CU"),
+    "venezuela": ("Venezuela", "فنزويلا", "VE"),
+    "haiti": ("Haiti", "هايتي", "HT"),
+    "ethiopia": ("Ethiopia", "إثيوبيا", "ET"),
+    "mali": ("Mali", "مالي", "ML"),
+    "guinea": ("Guinea", "غينيا", "GN"),
+    "togo": ("Togo", "توغو", "TG"),
+    "zambia": ("Zambia", "زامبيا", "ZM"),
+    "tanzania": ("Tanzania", "تانزانيا", "TZ"),
+    "malawi": ("Malawi", "مالاوي", "MW"),
+    "cote d'ivoire": ("Côte d'Ivoire", "كوت ديفوار", "CI"),
+    "ivory coast": ("Côte d'Ivoire", "كوت ديفوار", "CI"),
+    "côte d'ivoire": ("Côte d'Ivoire", "كوت ديفوار", "CI"),
+    "mozambique": ("Mozambique", "موزمبيق", "MZ"),
+    "maldives": ("Maldives", "المالديف", "MV"),
+    "timor leste": ("Timor Leste", "تيمور الشرقية", "TL"),
+    "timor": ("Timor Leste", "تيمور الشرقية", "TL"),
+    "nigeria": ("Nigeria", "نيجيريا", "NG"),
+    "kenya": ("Kenya", "كينيا", "KE"),
+    "ghana": ("Ghana", "غانا", "GH"),
+    "uganda": ("Uganda", "أوغندا", "UG"),
+    "angola": ("Angola", "أنغولا", "AO"),
+    "cameroon": ("Cameroon", "الكاميرون", "CM"),
+}
 
 COUNTRY_ALIASES: Dict[str, List[str]] = {
     "yemen": ["yemen", "اليمن"],
@@ -131,7 +162,69 @@ COUNTRY_ALIASES: Dict[str, List[str]] = {
     "malawi": ["malawi", "مالاوي"],
     "côte d'ivoire": ["côte d'ivoire", "cote d'ivoire", "ivory coast", "كوت ديفوار", "كوتي"],
     "tanzania": ["tanzania", "تانزانيا"],
+    "belgium": ["belgium", "بلجيكا"],
+    "montenegro": ["montenegro", "الجبل الأسود"],
 }
+
+EMOJI_PATTERN = re.compile(
+    r"[\U00010000-\U0010ffff\u2600-\u27bf\u2300-\u23ff\u2b50\u2705\u274c]"
+)
+
+NAV_KEYWORDS = [
+    "back",
+    "رجوع",
+    "⬅",
+    "🔙",
+    "next",
+    "prev",
+    "previous",
+    "التالي",
+    "السابق",
+    "➡️",
+    "⬅️",
+    ">>",
+    "<<",
+    "developer",
+    "panel",
+    "قناة",
+    "الدعم",
+    "support",
+    "channel",
+    "rules",
+    "شروط",
+    "مطور",
+    "balance",
+    "wallet",
+    "top",
+    "traffic",
+    "services",
+    "الخدمات",
+    "القائمة",
+    "menu",
+]
+
+BUSY_KEYWORDS = [
+    "مشغول",
+    "محجوز",
+    "مستخدم",
+    "مباع",
+    "منتهي",
+    "غير متاح",
+    "نفد",
+    "نفذ",
+    "taken",
+    "busy",
+    "sold",
+    "used",
+    "reserved",
+    "expired",
+    "unavailable",
+    "❌",
+    "🚫",
+    "⛔",
+    "🔒",
+    "✖",
+]
 
 
 @dataclass
@@ -167,7 +260,9 @@ class TelegramNumberManager:
         self._listeners_registered: bool = False
         self._ready_event = asyncio.Event()
         self._startup_task: Optional[asyncio.Task] = None
+        self._scanner_task: Optional[asyncio.Task] = None
         self.http = httpx.AsyncClient(timeout=10.0)
+        self._discovered_countries: Dict[str, List[dict]] = {b: [] for b in BOT_USERNAMES}
 
     async def start(self, delay_seconds: int = 15):
         self._startup_task = asyncio.create_task(self._delayed_connect(delay_seconds))
@@ -180,6 +275,7 @@ class TelegramNumberManager:
             if self.authorized:
                 self._register_otp_listeners()
                 print("Telegram connected and authorized successfully.")
+                self._scanner_task = asyncio.create_task(self.start_periodic_scanner())
             else:
                 self.last_errors["startup"] = "TG_STRING_SESSION منتهية أو ملغاة، تحتاج تجديد"
                 print("ERROR: TG_STRING_SESSION is invalid or revoked.")
@@ -193,6 +289,8 @@ class TelegramNumberManager:
     async def stop(self):
         if self._startup_task and not self._startup_task.done():
             self._startup_task.cancel()
+        if self._scanner_task and not self._scanner_task.done():
+            self._scanner_task.cancel()
         await self.http.aclose()
         if self.client.is_connected():
             await self.client.disconnect()
@@ -209,6 +307,8 @@ class TelegramNumberManager:
             self.authorized = await self.client.is_user_authorized()
             if self.authorized:
                 self._register_otp_listeners()
+                if not self._scanner_task or self._scanner_task.done():
+                    self._scanner_task = asyncio.create_task(self.start_periodic_scanner())
         if not self.authorized:
             raise RuntimeError("جلسة تيليجرام منتهية، يرجى تجديد TG_STRING_SESSION")
 
@@ -218,62 +318,180 @@ class TelegramNumberManager:
             self._entities[username] = await self.client.get_entity(username)
         return self._entities[username]
 
+    def parse_country_button(self, btn_text: str, bot_username: str) -> Optional[dict]:
+        cleaned = EMOJI_PATTERN.sub("", btn_text).strip()
+        if not cleaned:
+            return None
+
+        server_match = (
+            re.search(r"\b(?:WS|Server|سيرفر)\s*([1-9]|Top)\b", cleaned, re.IGNORECASE)
+            or re.search(r"\b[A-Za-z]+\s+([1-9])\s+[\d,]+", cleaned)
+            or re.search(r"\b[A-Za-z]+\s+([1-9])\b(?!\s*[-\d,])", cleaned)
+        )
+        server_label = ""
+        server_label_ar = ""
+        if server_match:
+            s_val = server_match.group(1).upper()
+            server_label = f" (Server {s_val})"
+            server_label_ar = f" (سيرفر {s_val})"
+
+        lowered = cleaned.lower()
+        for key, (en, ar, iso) in sorted(COUNTRY_DB.items(), key=lambda x: len(x[0]), reverse=True):
+            if key in lowered:
+                return {
+                    "country": f"{en}{server_label}",
+                    "ar": f"{ar}{server_label_ar}",
+                    "iso": iso,
+                    "bot": bot_username,
+                    "raw_button": btn_text,
+                    "clean_key": key,
+                }
+
+        # Fallback for any unmapped country
+        first_word = cleaned.split()[0] if cleaned.split() else cleaned
+        return {
+            "country": f"{first_word}{server_label}",
+            "ar": f"{first_word}{server_label_ar}",
+            "iso": "UN",
+            "bot": bot_username,
+            "raw_button": btn_text,
+            "clean_key": first_word.lower(),
+        }
+
+    def _is_navigation_button(self, text: str) -> bool:
+        lowered = text.lower()
+        return any(k in lowered for k in NAV_KEYWORDS)
+
+    async def start_periodic_scanner(self):
+        await asyncio.sleep(5)
+        while True:
+            try:
+                await self.scan_all_bots()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"Error in periodic scanner: {e}")
+            await asyncio.sleep(150)
+
+    async def scan_all_bots(self):
+        print("Periodic scan: scanning available countries across bots...")
+        for bot in BOT_USERNAMES:
+            state = self.bots[bot]
+            if state.locked:
+                continue
+
+            try:
+                await asyncio.wait_for(self._op_locks[bot].acquire(), timeout=5.0)
+            except (asyncio.TimeoutError, Exception):
+                continue
+
+            try:
+                countries = await self._scan_single_bot(bot)
+                if countries:
+                    self._discovered_countries[bot] = countries
+                    print(f"Periodic scan: {bot} has {len(countries)} countries available.")
+            except Exception as e:
+                print(f"Periodic scan error on {bot}: {e}")
+            finally:
+                try:
+                    await self._safe_reset_bot(bot)
+                except Exception:
+                    pass
+                self._op_locks[bot].release()
+
+            await asyncio.sleep(2.0)
+
+    async def _scan_single_bot(self, bot_username: str) -> List[dict]:
+        msg = await self._navigate_to_country_menu(bot_username)
+        if not msg or not msg.buttons:
+            return []
+
+        discovered = []
+        seen_keys = set()
+        for row in msg.buttons:
+            for btn in row:
+                text = (btn.text or "").strip()
+                if not text or self._is_navigation_button(text):
+                    continue
+                parsed = self.parse_country_button(text, bot_username)
+                if parsed:
+                    unique_id = (parsed["country"], parsed["bot"])
+                    if unique_id not in seen_keys:
+                        seen_keys.add(unique_id)
+                        discovered.append(parsed)
+        return discovered
+
     def get_countries_catalog(self) -> List[dict]:
-        self._cleanup_expired_locks()
-        return [
-            {**entry, "bot_busy": False}
-            for entry in COUNTRIES_CATALOG
-            if not self.bots[entry["bot"]].locked
-        ]
+        self._cleanup_expired_locks(ttl_seconds=300)
+        result = []
+        seen = set()
+        for bot in BOT_USERNAMES:
+            if self.bots[bot].locked:
+                continue
+            for item in self._discovered_countries.get(bot, []):
+                unique_key = (item["country"], item["bot"])
+                if unique_key not in seen:
+                    seen.add(unique_key)
+                    result.append({**item, "bot_busy": False})
+        return result
 
     def _register_otp_listeners(self):
         if self._listeners_registered:
             return
         self._listeners_registered = True
-        monitored_chats = OTP_GROUPS + BOT_USERNAMES
 
-        @self.client.on(events.NewMessage(chats=monitored_chats))
+        @self.client.on(events.NewMessage())
         async def otp_handler(event):
             try:
                 if getattr(event.message, "out", False):
                     return
+
+                active_items = [
+                    item
+                    for state in self.bots.values()
+                    for item in state.numbers
+                    if item.status == "RESERVED"
+                ]
+                if not active_items:
+                    return
+
                 text = event.raw_text or ""
-                search_pool = text
                 if event.message and event.message.buttons:
                     for row in event.message.buttons:
                         for btn in row:
-                            search_pool += " " + (btn.text or "")
+                            text += " " + (btn.text or "")
 
-                otp_match = re.search(r"\b(\d{3}[-\s]?\d{3})\b", search_pool)
+                otp_match = re.search(r"\b(\d{3}[-\s]?\d{3})\b", text)
+                if not otp_match:
+                    otp_match = re.search(r"(?i)(?:code|كود|رمز|otp)[^\d]*(\d{4,8})\b", text)
                 if not otp_match:
                     return
 
                 clean_otp = re.sub(r"\D", "", otp_match.group(1))
-                sender_chat = await event.get_chat()
-                chat_username = getattr(sender_chat, "username", "") or ""
+                cleaned_digits_pool = re.sub(r"\D", "", text)
 
-                for bot_state in self.bots.values():
-                    for item in bot_state.numbers:
-                        if item.status != "RESERVED":
-                            continue
-                        last4 = item.phone[-4:]
-                        if chat_username in OTP_GROUPS:
-                            if last4 in re.sub(r"\s+", "", text):
-                                item.otp_code = clean_otp
-                                item.status = "COMPLETED"
-                                return
-                        elif chat_username.lower() == item.bot_username.lower():
-                            if self._is_noise_message(event.message):
-                                if last4 in re.sub(r"\s+", "", text):
-                                    item.otp_code = clean_otp
-                                    item.status = "COMPLETED"
-                                    return
-                            else:
-                                item.otp_code = clean_otp
-                                item.status = "COMPLETED"
-                                return
+                sender_chat = await event.get_chat()
+                chat_username = (getattr(sender_chat, "username", "") or "").lower()
+
+                for item in active_items:
+                    last4 = re.sub(r"\D", "", item.phone)[-4:]
+                    if last4 in cleaned_digits_pool:
+                        item.otp_code = clean_otp
+                        item.status = "COMPLETED"
+                        print(f"OTP matched for {item.phone} (last4={last4}): {clean_otp}")
+                        return
+                    if chat_username and chat_username == item.bot_username.lower():
+                        if not self._is_noise_message(event.message):
+                            item.otp_code = clean_otp
+                            item.status = "COMPLETED"
+                            print(f"Direct bot OTP matched for {item.phone}: {clean_otp}")
+                            return
             except Exception:
                 pass
+
+        @self.client.on(events.MessageEdited())
+        async def otp_edited_handler(event):
+            await otp_handler(event)
 
     def _is_noise_message(self, msg: Optional[Message]) -> bool:
         if not msg:
@@ -295,7 +513,6 @@ class TelegramNumberManager:
         return False
 
     def _button_signature(self, msg: Optional[Message]) -> Tuple[str, ...]:
-        """توقيع مبسّط للأزرار (بدون الأرقام المتغيرة) لاكتشاف الرسائل المكررة"""
         if not msg or not msg.buttons:
             return ()
         sig = []
@@ -344,7 +561,7 @@ class TelegramNumberManager:
         for r_idx, row in enumerate(msg.buttons):
             for c_idx, btn in enumerate(row):
                 txt = (btn.text or "").lower()
-                if "رجوع" in txt or "back" in txt or "⬅" in txt or "🔙" in txt:
+                if any(k in txt for k in ["رجوع", "back", "⬅", "🔙"]):
                     continue
                 return (r_idx, c_idx)
         return None
@@ -391,7 +608,6 @@ class TelegramNumberManager:
         target_rc = rc
         if target_rc is None and text_contains:
             target_rc = self._find_button_rc(msg, [text_contains])
-            # If not found on current page, check for Next / >> pagination button
             if not target_rc:
                 next_rc = self._find_button_rc(msg, ["next", ">>", "التالي", "➡️", ">"])
                 if next_rc:
@@ -418,10 +634,8 @@ class TelegramNumberManager:
             ev_msg = event.message
             if getattr(ev_msg, "out", False) or self._is_noise_message(ev_msg):
                 return
-            # تجاهل رسائل الكيبورد السفلي عندما نضغط على زر Inline
             if is_inline_click and isinstance(ev_msg.reply_markup, ReplyKeyboardMarkup):
                 return
-            # تجاهل التعديلات/الرسائل المكررة التي تحمل نفس الأزرار بدون أرقام
             new_sig = self._button_signature(ev_msg)
             if new_sig and new_sig == prev_sig and not self._extract_phones_from_msg(ev_msg):
                 return
@@ -459,7 +673,6 @@ class TelegramNumberManager:
                 return None
 
             res = fut.result()
-
             if res and not res.buttons and not self._extract_phones_from_msg(res):
                 fut2 = loop.create_future()
 
@@ -497,19 +710,22 @@ class TelegramNumberManager:
     def _extract_phones(self, text: str) -> List[str]:
         if not text:
             return []
-        raw_matches = re.findall(r"\+?\d[\d\s\-]{7,16}\d", text)
+        cleaned_lines = []
+        for line in text.splitlines():
+            if any(b in line.lower() for b in BUSY_KEYWORDS):
+                continue
+            cleaned_lines.append(line)
+        cleaned_text = "\n".join(cleaned_lines)
+
+        raw_matches = re.findall(r"\+?\b\d[\d\s\-]{7,15}\d\b", cleaned_text)
         phones = []
         for m in raw_matches:
             digits = re.sub(r"\D", "", m)
             if 8 <= len(digits) <= 15:
+                if re.search(r"202[4-9]\d{4}", digits):
+                    continue
                 phones.append("+" + digits)
         return list(dict.fromkeys(phones))
-
-    BUSY_KEYWORDS = [
-        "مشغول", "محجوز", "مستخدم", "مباع", "منتهي", "غير متاح", "نفد", "نفذ",
-        "taken", "busy", "sold", "used", "reserved", "expired", "unavailable",
-        "❌", "🚫", "⛔", "🔒", "✖"
-    ]
 
     def _extract_phones_from_msg(self, msg: Optional[Message]) -> List[str]:
         if not msg:
@@ -521,21 +737,13 @@ class TelegramNumberManager:
                     text = (btn.text or "").strip()
                     if not text:
                         continue
-                    if any(busy in text.lower() for busy in self.BUSY_KEYWORDS):
+                    if any(busy in text.lower() for busy in BUSY_KEYWORDS):
                         continue
                     btn_phones = self._extract_phones(text)
                     valid_phones.extend(btn_phones)
 
-        lines = (msg.raw_text or "").splitlines()
-        for line in lines:
-            line_clean = line.strip()
-            if not line_clean:
-                continue
-            if any(busy in line_clean.lower() for busy in self.BUSY_KEYWORDS):
-                continue
-            line_phones = self._extract_phones(line_clean)
-            valid_phones.extend(line_phones)
-
+        text_phones = self._extract_phones(msg.raw_text or "")
+        valid_phones.extend(text_phones)
         return list(dict.fromkeys(valid_phones))
 
     async def is_registered_on_whatsapp(self, phone: str) -> bool:
@@ -549,12 +757,78 @@ class TelegramNumberManager:
         except Exception:
             return False
 
-    async def _filter_fresh_numbers(self, phones: List[str], country: str, bot_username: str) -> List[NumberItem]:
+    async def _filter_fresh_numbers(
+        self, phones: List[str], country: str, bot_username: str
+    ) -> List[NumberItem]:
+        if not WA_CHECKER_URL:
+            return [NumberItem(phone=p, country=country, bot_username=bot_username) for p in phones]
         fresh = []
         for p in phones:
             if not await self.is_registered_on_whatsapp(p):
                 fresh.append(NumberItem(phone=p, country=country, bot_username=bot_username))
         return fresh
+
+    async def _navigate_to_country_menu(self, bot_username: str) -> Optional[Message]:
+        if bot_username == "B_M_Numbers_Files_bot":
+            m1 = await self._send_and_wait(bot_username, "/getnumber", timeout=8)
+            if not m1:
+                return None
+            return await self._click_and_wait(bot_username, m1, text_contains="whats", timeout=8)
+
+        elif bot_username == "smslybot":
+            m1 = await self._send_and_wait(bot_username, "Get Number", timeout=8)
+            if not m1:
+                return None
+            return await self._click_and_wait(bot_username, m1, text_contains="WhatsApp", timeout=8)
+
+        elif bot_username == "SOJIB_BRO_FRESH_NUMBER_BOT":
+            m1 = await self._send_and_wait(bot_username, "/start", timeout=8)
+            if not m1:
+                return None
+            m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Number", timeout=8)
+            if not m2:
+                return None
+            return await self._click_and_wait(bot_username, m2, text_contains="WHATSAPP", timeout=8)
+
+        elif bot_username == "NumberNest_2_Bot":
+            m1 = await self._send_and_wait(bot_username, "/start", timeout=8)
+            if not m1:
+                return None
+            if self._find_button_rc(m1, ["Get Number"]):
+                m1 = await self._click_and_wait(bot_username, m1, text_contains="Get Number", timeout=8)
+            wa_btn = self._find_button_rc(m1, ["WhatsApp", "whatsapp", "واتس"])
+            if wa_btn:
+                m2 = await self._click_and_wait(bot_username, m1, rc=wa_btn, timeout=8)
+                if m2 and m2.buttons:
+                    return m2
+            return m1
+
+        elif bot_username == "JXOTPBot":
+            m1 = await self._send_and_wait(bot_username, "/start", timeout=8)
+            if not m1:
+                return None
+            m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Numbers", timeout=8)
+            if not m2:
+                m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Number", timeout=8)
+            if not m2:
+                return None
+            return await self._click_and_wait(bot_username, m2, text_contains="whats", timeout=8)
+
+        elif bot_username == "seven1tel_Number_Bot":
+            m1 = await self._send_and_wait(bot_username, "/start", timeout=8)
+            if not m1:
+                return None
+            m2 = await self._click_and_wait(bot_username, m1, text_contains="get number", timeout=8)
+            if not m2:
+                m2 = await self._click_and_wait(bot_username, m1, text_contains="طلب رقم", timeout=8)
+            if not m2:
+                return None
+            m3 = await self._click_and_wait(bot_username, m2, text_contains="WhatsApp", timeout=8)
+            if not m3:
+                m3 = await self._click_and_wait(bot_username, m2, text_contains="واتس", timeout=8)
+            return m3
+
+        return None
 
     async def fetch_from_bot(
         self,
@@ -575,7 +849,7 @@ class TelegramNumberManager:
         try:
             return await asyncio.wait_for(
                 self._fetch_from_bot_locked(bot_username, country, force_refresh, max_retries),
-                timeout=22.0,
+                timeout=25.0,
             )
         except asyncio.TimeoutError:
             err = "انتهت مهلة استجابة البوت، حاول مجدداً"
@@ -609,116 +883,60 @@ class TelegramNumberManager:
         msg = None
 
         try:
-            if bot_username == "B_M_Numbers_Files_bot":
-                target_country = "Yemen"
-                m1 = await self._send_and_wait(bot_username, "/getnumber")
-                trace.append(self._serialize_msg("1: /getnumber", m1))
-                m2 = await self._click_and_wait(bot_username, m1, text_contains="whats") if m1 else None
-                trace.append(self._serialize_msg("2: WhatsApp", m2))
-                msg = await self._click_and_wait(bot_username, m2, text_contains="yemen") if m2 else None
-                trace.append(self._serialize_msg("3: Yemen", msg))
+            entity = await self._get_entity_cached(bot_username)
 
-            elif bot_username == "smslybot":
-                target_country = country or "Egypt"
-                m1 = await self._send_and_wait(bot_username, "Get Number")
-                trace.append(self._serialize_msg("1: Get Number", m1))
-                m2 = await self._click_and_wait(bot_username, m1, text_contains="WhatsApp") if m1 else None
-                trace.append(self._serialize_msg("2: WhatsApp", m2))
-                msg = await self._click_and_wait(bot_username, m2, text_contains=target_country) if m2 else None
-                trace.append(self._serialize_msg(f"3: {target_country}", msg))
-
-            elif bot_username == "SOJIB_BRO_FRESH_NUMBER_BOT":
-                target_country = country or "Senegal"
-                clean_target = (
-                    target_country.lower()
-                    .replace("(server 1)", "")
-                    .replace("(server 2)", "")
-                    .strip()
-                )
-                m1 = await self._send_and_wait(bot_username, "/start")
-                trace.append(self._serialize_msg("1: /start", m1))
-                m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Number") if m1 else None
-                trace.append(self._serialize_msg("2: Get Number", m2))
-                m3 = await self._click_and_wait(bot_username, m2, text_contains="whatsapp") if m2 else None
-                trace.append(self._serialize_msg("3: WHATSAPP", m3))
-                if m3:
-                    target_btn = self._find_button_rc(m3, [clean_target])
-                    if target_btn:
-                        msg = await self._click_and_wait(bot_username, m3, rc=target_btn)
-                    else:
-                        msg = None
-                        trace.append({"step": f"4: {target_country}", "error": f"الدولة {target_country} غير متوفرة حالياً في البوت"})
-                else:
+            # Fast path for change number / refresh
+            if force_refresh and state.last_message_id and state.active_country == target_country:
+                try:
+                    last_msg = await self.client.get_messages(entity, ids=state.last_message_id)
+                    if last_msg and last_msg.buttons:
+                        change_rc = self._find_button_rc(
+                            last_msg, ["change number", "تغيير الرقم", "تغيير", "رقم جديد", "new number", "🔁"]
+                        )
+                        if change_rc:
+                            msg = await self._click_and_wait(bot_username, last_msg, rc=change_rc, timeout=8)
+                            if msg and self._extract_phones_from_msg(msg):
+                                trace.append(self._serialize_msg("Fast Change Number", msg))
+                except Exception:
                     msg = None
-                if msg:
-                    trace.append(self._serialize_msg(f"4: {target_country}", msg))
 
-            elif bot_username == "NumberNest_2_Bot":
-                target_country = country or "Italy"
-                m1 = await self._send_and_wait(bot_username, "/start")
-                trace.append(self._serialize_msg("1: /start", m1))
-                if m1 and self._find_button_rc(m1, ["Get Number"]):
-                    m1 = await self._click_and_wait(bot_username, m1, text_contains="Get Number")
-                    trace.append(self._serialize_msg("1b: Get Number", m1))
-                m2 = await self._click_and_wait(bot_username, m1, text_contains=target_country) if m1 else None
-                trace.append(self._serialize_msg(f"2: {target_country}", m2))
-                if m2 and self._extract_phones_from_msg(m2):
-                    msg = m2
-                elif m2:
-                    branch_rc = self._find_first_non_back_rc(m2)
-                    if branch_rc:
-                        msg = await self._click_and_wait(bot_username, m2, rc=branch_rc)
-                        trace.append(self._serialize_msg("3: Branch", msg))
-                    else:
-                        trace.append({"step": "3: Branch", "error": "No available branch"})
+            if not msg:
+                # Step 1: Navigate to country menu
+                country_menu = await self._navigate_to_country_menu(bot_username)
+                trace.append(self._serialize_msg("Country Menu", country_menu))
+                if not country_menu or not country_menu.buttons:
+                    err = "تعذر فتح قائمة الدول في هذا البوت"
+                    self.last_errors[bot_username] = err
+                    return [], err
 
-            elif bot_username == "JXOTPBot":
-                target_country = country or "Cambodia"
+                # Step 2: Find the matching country button
                 clean_target = (
                     target_country.lower()
                     .replace("(server 1)", "")
                     .replace("(server 2)", "")
+                    .replace("(server 3)", "")
                     .replace("(server jx)", "")
+                    .replace("(server top)", "")
                     .strip()
                 )
-                m1 = await self._send_and_wait(bot_username, "/start")
-                trace.append(self._serialize_msg("1: /start", m1))
-                m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Numbers") if m1 else None
-                trace.append(self._serialize_msg("2: Get Numbers", m2))
-                m3 = await self._click_and_wait(bot_username, m2, text_contains="whats") if m2 else None
-                trace.append(self._serialize_msg("3: WhatsApp", m3))
-                if m3:
-                    target_btn = self._find_button_rc(m3, [clean_target])
-                    if target_btn:
-                        msg = await self._click_and_wait(bot_username, m3, rc=target_btn)
-                    else:
-                        msg = None
-                        trace.append({"step": f"4: {target_country}", "error": f"الدولة {target_country} غير متوفرة حالياً في البوت"})
-                else:
-                    msg = None
-                if msg:
-                    trace.append(self._serialize_msg(f"4: {target_country}", msg))
 
-            elif bot_username == "seven1tel_Number_Bot":
-                target_country = country or "Egypt"
-                clean_target = (
-                    target_country.lower()
-                    .replace("(server 1)", "")
-                    .replace("(server 2)", "")
-                    .strip()
-                )
-                m1 = await self._send_and_wait(bot_username, "/start")
-                trace.append(self._serialize_msg("1: /start", m1))
-                m2 = await self._click_and_wait(bot_username, m1, text_contains="get number") if m1 else None
-                if not m2 and m1:
-                    m2 = await self._click_and_wait(bot_username, m1, text_contains="طلب رقم")
-                trace.append(self._serialize_msg("2: get number", m2))
-                m3 = await self._click_and_wait(bot_username, m2, text_contains="واتس") if m2 else None
-                if not m3 and m2:
-                    m3 = await self._click_and_wait(bot_username, m2, text_contains="whats")
-                trace.append(self._serialize_msg("3: واتس", m3))
-                msg = await self._click_and_wait(bot_username, m3, text_contains=clean_target) if m3 else None
-                trace.append(self._serialize_msg(f"4: {clean_target}", msg))
+                country_rc = self._find_button_rc(country_menu, [clean_target])
+                if not country_rc:
+                    err = f"الدولة {target_country} غير متوفرة حالياً في البوت"
+                    self.last_errors[bot_username] = err
+                    trace.append({"step": "Select Country", "error": err})
+                    return [], err
+
+                # Step 3: Click country button
+                msg = await self._click_and_wait(bot_username, country_menu, rc=country_rc, timeout=10)
+                trace.append(self._serialize_msg(f"Clicked {target_country}", msg))
+
+                # Step 4: Handle branch submenus (e.g. NumberNest branches)
+                if msg and not self._extract_phones_from_msg(msg) and msg.buttons:
+                    branch_rc = self._find_first_non_back_rc(msg)
+                    if branch_rc:
+                        msg = await self._click_and_wait(bot_username, msg, rc=branch_rc, timeout=8)
+                        trace.append(self._serialize_msg("Branch Click", msg))
 
         except FloodWaitError as e:
             err = f"تيليجرام طلب الانتظار {e.seconds} ثانية قبل الطلب مجدداً"
@@ -731,7 +949,7 @@ class TelegramNumberManager:
 
         if not msg:
             asyncio.create_task(self._safe_reset_bot(bot_username))
-            err = "الدولة غير متوفرة حالياً في هذا البوت أو لم يستجب البوت"
+            err = "الدولة غير متوفرة حالياً أو لم يستجب البوت"
             self.last_errors[bot_username] = err
             return [], err
 
@@ -742,11 +960,11 @@ class TelegramNumberManager:
             if fresh_items:
                 break
             change_rc = self._find_button_rc(
-                msg, ["change number", "تغيير الرقم", "تغيير", "رقم جديد", "new number"]
+                msg, ["change number", "تغيير الرقم", "تغيير", "رقم جديد", "new number", "🔁"]
             )
             if not change_rc:
                 break
-            msg = await self._click_and_wait(bot_username, msg, rc=change_rc)
+            msg = await self._click_and_wait(bot_username, msg, rc=change_rc, timeout=8)
             if not msg:
                 break
 
@@ -758,7 +976,7 @@ class TelegramNumberManager:
         return fresh_items, None
 
     def reserve_number(self, phone: str, user_id: str) -> Optional[NumberItem]:
-        self._cleanup_expired_locks()
+        self._cleanup_expired_locks(ttl_seconds=300)
         for state in self.bots.values():
             if state.locked:
                 continue
@@ -780,7 +998,7 @@ class TelegramNumberManager:
             state.active_country = None
             state.numbers = []
 
-    def _cleanup_expired_locks(self, ttl_seconds: int = 60):
+    def _cleanup_expired_locks(self, ttl_seconds: int = 300):
         now = time.time()
         for state in self.bots.values():
             if state.locked:

@@ -111,6 +111,12 @@ async def check_otp(phone: str):
     raise HTTPException(status_code=404, detail="الرقم غير موجود في الجلسة الحالية")
 
 
+@app.post("/scan")
+async def trigger_scan():
+    asyncio.create_task(manager.scan_all_bots())
+    return {"status": "scan_started"}
+
+
 @app.post("/release/{bot_username}")
 async def release_bot(bot_username: str):
     manager.release_bot(bot_username)
