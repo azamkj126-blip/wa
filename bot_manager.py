@@ -32,6 +32,7 @@ BOT_USERNAMES = [
     "SOJIB_BRO_FRESH_NUMBER_BOT",
     "NumberNest_2_Bot",
     "JXOTPBot",
+    "seven1tel_Number_Bot",
 ]
 
 COUNTRIES_CATALOG = [
@@ -66,6 +67,19 @@ COUNTRIES_CATALOG = [
     {"country": "Timor Leste", "ar": "تيمور الشرقية", "iso": "TL", "bot": "smslybot"},
     {"country": "Togo", "ar": "توغو", "iso": "TG", "bot": "smslybot"},
     {"country": "Zambia", "ar": "زامبيا", "iso": "ZM", "bot": "smslybot"},
+    {"country": "Yemen", "ar": "اليمن (سيرفر 71)", "iso": "YE", "bot": "seven1tel_Number_Bot"},
+    {"country": "Syria", "ar": "سوريا (سيرفر 71)", "iso": "SY", "bot": "seven1tel_Number_Bot"},
+    {"country": "Egypt", "ar": "مصر (سيرفر 71)", "iso": "EG", "bot": "seven1tel_Number_Bot"},
+    {"country": "Sudan", "ar": "السودان (سيرفر 71)", "iso": "SD", "bot": "seven1tel_Number_Bot"},
+    {"country": "Saudi Arabia", "ar": "السعودية (سيرفر 71)", "iso": "SA", "bot": "seven1tel_Number_Bot"},
+    {"country": "Jordan", "ar": "الأردن (سيرفر 71)", "iso": "JO", "bot": "seven1tel_Number_Bot"},
+    {"country": "Iraq", "ar": "العراق (سيرفر 71)", "iso": "IQ", "bot": "seven1tel_Number_Bot"},
+    {"country": "Turkey", "ar": "تركيا (سيرفر 71)", "iso": "TR", "bot": "seven1tel_Number_Bot"},
+    {"country": "United Kingdom", "ar": "بريطانيا (سيرفر 71)", "iso": "GB", "bot": "seven1tel_Number_Bot"},
+    {"country": "United States", "ar": "أمريكا (سيرفر 71)", "iso": "US", "bot": "seven1tel_Number_Bot"},
+    {"country": "Germany", "ar": "ألمانيا (سيرفر 71)", "iso": "DE", "bot": "seven1tel_Number_Bot"},
+    {"country": "Georgia", "ar": "جورجيا (سيرفر 71)", "iso": "GE", "bot": "seven1tel_Number_Bot"},
+    {"country": "Pakistan", "ar": "باكستان (سيرفر 71)", "iso": "PK", "bot": "seven1tel_Number_Bot"},
 ]
 
 
@@ -96,6 +110,15 @@ COUNTRY_ALIASES: Dict[str, List[str]] = {
     "timor leste": ["timor", "تيمور"],
     "togo": ["togo", "توغو"],
     "zambia": ["zambia", "زامبيا"],
+    "germany": ["germany", "ألمانيا", "المانيا", "deutschland"],
+    "united kingdom": ["united kingdom", "uk", "بريطانيا", "المملكة المتحدة"],
+    "united states": ["united states", "usa", "us", "أمريكا", "امريكا"],
+    "saudi arabia": ["saudi", "السعودية", "المملكة العربية السعودية"],
+    "iraq": ["iraq", "العراق"],
+    "jordan": ["jordan", "الأردن", "الاردن"],
+    "turkey": ["turkey", "تركيا"],
+    "morocco": ["morocco", "المغرب"],
+    "algeria": ["algeria", "الجزائر"],
 }
 
 
@@ -114,6 +137,7 @@ class NumberItem:
 class BotState:
     username: str
     locked: bool = False
+    locked_at: float = 0.0
     active_country: Optional[str] = None
     last_message_id: Optional[int] = None
     numbers: List[NumberItem] = field(default_factory=list)
@@ -468,16 +492,38 @@ class TelegramNumberManager:
                 phones.append("+" + digits)
         return list(dict.fromkeys(phones))
 
+    BUSY_KEYWORDS = [
+        "مشغول", "محجوز", "مستخدم", "مباع", "منتهي", "غير متاح", "نفد", "نفذ",
+        "taken", "busy", "sold", "used", "reserved", "expired", "unavailable",
+        "❌", "🚫", "⛔", "🔒", "✖"
+    ]
+
     def _extract_phones_from_msg(self, msg: Optional[Message]) -> List[str]:
         if not msg:
             return []
-        sources = [msg.raw_text or ""]
+        valid_phones = []
         if msg.buttons:
             for row in msg.buttons:
                 for btn in row:
-                    if btn.text:
-                        sources.append(btn.text)
-        return self._extract_phones("\n".join(sources))
+                    text = (btn.text or "").strip()
+                    if not text:
+                        continue
+                    if any(busy in text.lower() for busy in self.BUSY_KEYWORDS):
+                        continue
+                    btn_phones = self._extract_phones(text)
+                    valid_phones.extend(btn_phones)
+
+        lines = (msg.raw_text or "").splitlines()
+        for line in lines:
+            line_clean = line.strip()
+            if not line_clean:
+                continue
+            if any(busy in line_clean.lower() for busy in self.BUSY_KEYWORDS):
+                continue
+            line_phones = self._extract_phones(line_clean)
+            valid_phones.extend(line_phones)
+
+        return list(dict.fromkeys(valid_phones))
 
     async def is_registered_on_whatsapp(self, phone: str) -> bool:
         if not WA_CHECKER_URL:
@@ -609,6 +655,21 @@ class TelegramNumberManager:
                 msg = await self._click_and_wait(bot_username, m3, text_contains="cambodia") if m3 else None
                 trace.append(self._serialize_msg(f"4: {target_country}", msg))
 
+            elif bot_username == "seven1tel_Number_Bot":
+                target_country = country or "Yemen"
+                m1 = await self._send_and_wait(bot_username, "/start")
+                trace.append(self._serialize_msg("1: /start", m1))
+                m2 = await self._click_and_wait(bot_username, m1, text_contains="get number") if m1 else None
+                if not m2 and m1:
+                    m2 = await self._click_and_wait(bot_username, m1, text_contains="طلب رقم")
+                trace.append(self._serialize_msg("2: get number", m2))
+                m3 = await self._click_and_wait(bot_username, m2, text_contains="واتس") if m2 else None
+                if not m3 and m2:
+                    m3 = await self._click_and_wait(bot_username, m2, text_contains="whats")
+                trace.append(self._serialize_msg("3: واتس", m3))
+                msg = await self._click_and_wait(bot_username, m3, text_contains=target_country) if m3 else None
+                trace.append(self._serialize_msg(f"4: {target_country}", msg))
+
         except FloodWaitError as e:
             err = f"تيليجرام طلب الانتظار {e.seconds} ثانية قبل الطلب مجدداً"
             self.last_errors[bot_username] = err
@@ -657,6 +718,7 @@ class TelegramNumberManager:
                     item.reserved_by = user_id
                     item.reserved_at = time.time()
                     state.locked = True
+                    state.locked_at = time.time()
                     return item
         return None
 
@@ -664,15 +726,25 @@ class TelegramNumberManager:
         state = self.bots.get(bot_username)
         if state:
             state.locked = False
+            state.locked_at = 0.0
             state.active_country = None
             state.numbers = []
 
-    def _cleanup_expired_locks(self, ttl_seconds: int = 300):
+    def _cleanup_expired_locks(self, ttl_seconds: int = 180):
         now = time.time()
         for state in self.bots.values():
             if state.locked:
                 reserved = [n for n in state.numbers if n.status == "RESERVED"]
-                if reserved and (now - reserved[0].reserved_at) > ttl_seconds:
+                is_expired = False
+                if not reserved:
+                    is_expired = True
+                elif getattr(state, "locked_at", 0.0) > 0 and (now - state.locked_at) > ttl_seconds:
+                    is_expired = True
+                elif (now - reserved[0].reserved_at) > ttl_seconds:
+                    is_expired = True
+
+                if is_expired:
                     state.locked = False
+                    state.locked_at = 0.0
                     state.active_country = None
                     state.numbers = []
