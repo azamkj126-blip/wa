@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 import httpx
 from telethon import TelegramClient, events
-from telethon.errors import FloodWaitError
+from telethon.errors import FloodWaitError, AuthKeyUnregisteredError
 from telethon.sessions import StringSession
 from telethon.tl.custom import Message
 from telethon.tl.types import ReplyInlineMarkup, ReplyKeyboardMarkup
@@ -364,19 +364,27 @@ class TelegramNumberManager:
         return any(k in lowered for k in NAV_KEYWORDS)
 
     async def start_periodic_scanner(self):
-        await asyncio.sleep(5)
+        await asyncio.sleep(10)
         while True:
+            if not self.authorized:
+                print("Periodic scanner paused: telegram not authorized.")
+                await asyncio.sleep(60)
+                continue
             try:
                 await self.scan_all_bots()
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 print(f"Error in periodic scanner: {e}")
-            await asyncio.sleep(150)
+            await asyncio.sleep(300)
 
     async def scan_all_bots(self):
+        if not self.authorized:
+            return
         print("Periodic scan: scanning available countries across bots...")
         for bot in BOT_USERNAMES:
+            if not self.authorized:
+                break
             state = self.bots[bot]
             if state.locked:
                 continue
@@ -387,10 +395,14 @@ class TelegramNumberManager:
                 continue
 
             try:
-                countries = await self._scan_single_bot(bot)
+                countries = await asyncio.wait_for(self._scan_single_bot(bot), timeout=25.0)
                 if countries:
                     self._discovered_countries[bot] = countries
                     print(f"Periodic scan: {bot} has {len(countries)} countries available.")
+            except AuthKeyUnregisteredError:
+                self.authorized = False
+                print("Periodic scan: AuthKeyUnregisteredError, Telegram session has been revoked.")
+                break
             except Exception as e:
                 print(f"Periodic scan error on {bot}: {e}")
             finally:
@@ -398,9 +410,13 @@ class TelegramNumberManager:
                     await self._safe_reset_bot(bot)
                 except Exception:
                     pass
-                self._op_locks[bot].release()
+                if self._op_locks[bot].locked():
+                    try:
+                        self._op_locks[bot].release()
+                    except Exception:
+                        pass
 
-            await asyncio.sleep(2.0)
+            await asyncio.sleep(6.0)
 
     async def _scan_single_bot(self, bot_username: str) -> List[dict]:
         msg = await self._navigate_to_country_menu(bot_username)
@@ -583,6 +599,8 @@ class TelegramNumberManager:
         return None
 
     async def _safe_reset_bot(self, bot_username: str):
+        if not self.authorized:
+            return
         try:
             entity = await self._get_entity_cached(bot_username)
             await self.client.send_message(entity, "/start")
@@ -872,7 +890,11 @@ class TelegramNumberManager:
             self.last_errors[bot_username] = err
             return [], err
         finally:
-            self._op_locks[bot_username].release()
+            if self._op_locks[bot_username].locked():
+                try:
+                    self._op_locks[bot_username].release()
+                except Exception:
+                    pass
 
     async def _fetch_from_bot_locked(
         self,
@@ -958,9 +980,17 @@ class TelegramNumberManager:
             err = f"تيليجرام طلب الانتظار {e.seconds} ثانية قبل الطلب مجدداً"
             self.last_errors[bot_username] = err
             return [], err
+        except AuthKeyUnregisteredError:
+            self.authorized = False
+            err = "انتهت جلسة تيليجرام أو تم تسجيل الخروج، يرجى تجديد TG_STRING_SESSION في Render"
+            self.last_errors[bot_username] = err
+            return [], err
         except Exception as e:
             err = f"{type(e).__name__}: {e}"
             self.last_errors[bot_username] = err
+            if "AuthKey" in str(e) or "unregistered" in str(e).lower():
+                self.authorized = False
+                return [], "انتهت جلسة تيليجرام أو تم تسجيل الخروج، يرجى تجديد TG_STRING_SESSION في Render"
             return [], str(e) if "جلسة تيليجرام" in str(e) else "تعذر الاتصال ببوت الأرقام حالياً، حاول مرة أخرى"
 
         if not msg:
