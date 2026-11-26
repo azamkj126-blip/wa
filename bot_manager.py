@@ -40,6 +40,9 @@ COUNTRIES_CATALOG = [
     {"country": "Sudan", "ar": "السودان", "iso": "SD", "bot": "SOJIB_BRO_FRESH_NUMBER_BOT"},
     {"country": "Pakistan", "ar": "باكستان", "iso": "PK", "bot": "SOJIB_BRO_FRESH_NUMBER_BOT"},
     {"country": "Cambodia", "ar": "كمبوديا", "iso": "KH", "bot": "JXOTPBot"},
+    {"country": "Yemen (Server JX)", "ar": "اليمن (سيرفر JX)", "iso": "YE", "bot": "JXOTPBot"},
+    {"country": "Sudan (Server JX)", "ar": "السودان (سيرفر JX)", "iso": "SD", "bot": "JXOTPBot"},
+    {"country": "Senegal (Server JX)", "ar": "السنغال (سيرفر JX)", "iso": "SN", "bot": "JXOTPBot"},
     {"country": "Egypt", "ar": "مصر (سيرفر 1)", "iso": "EG", "bot": "NumberNest_2_Bot"},
     {"country": "Sudan", "ar": "السودان (سيرفر 2)", "iso": "SD", "bot": "NumberNest_2_Bot"},
     {"country": "Syria", "ar": "سوريا", "iso": "SY", "bot": "NumberNest_2_Bot"},
@@ -544,7 +547,7 @@ class TelegramNumberManager:
             data = resp.json()
             return bool(data.get("registered", False))
         except Exception:
-            return True
+            return False
 
     async def _filter_fresh_numbers(self, phones: List[str], country: str, bot_username: str) -> List[NumberItem]:
         fresh = []
@@ -625,15 +628,30 @@ class TelegramNumberManager:
                 trace.append(self._serialize_msg(f"3: {target_country}", msg))
 
             elif bot_username == "SOJIB_BRO_FRESH_NUMBER_BOT":
-                target_country = country or "Pakistan"
+                target_country = country or "Senegal"
+                clean_target = (
+                    target_country.lower()
+                    .replace("(server 1)", "")
+                    .replace("(server 2)", "")
+                    .strip()
+                )
                 m1 = await self._send_and_wait(bot_username, "/start")
                 trace.append(self._serialize_msg("1: /start", m1))
                 m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Number") if m1 else None
                 trace.append(self._serialize_msg("2: Get Number", m2))
                 m3 = await self._click_and_wait(bot_username, m2, text_contains="whatsapp") if m2 else None
                 trace.append(self._serialize_msg("3: WHATSAPP", m3))
-                msg = await self._click_and_wait(bot_username, m3, text_contains=target_country) if m3 else None
-                trace.append(self._serialize_msg(f"4: {target_country}", msg))
+                if m3:
+                    target_btn = self._find_button_rc(m3, [clean_target])
+                    if target_btn:
+                        msg = await self._click_and_wait(bot_username, m3, rc=target_btn)
+                    else:
+                        msg = None
+                        trace.append({"step": f"4: {target_country}", "error": f"الدولة {target_country} غير متوفرة حالياً في البوت"})
+                else:
+                    msg = None
+                if msg:
+                    trace.append(self._serialize_msg(f"4: {target_country}", msg))
 
             elif bot_username == "NumberNest_2_Bot":
                 target_country = country or "Italy"
@@ -655,15 +673,31 @@ class TelegramNumberManager:
                         trace.append({"step": "3: Branch", "error": "No available branch"})
 
             elif bot_username == "JXOTPBot":
-                target_country = "Cambodia"
+                target_country = country or "Cambodia"
+                clean_target = (
+                    target_country.lower()
+                    .replace("(server 1)", "")
+                    .replace("(server 2)", "")
+                    .replace("(server jx)", "")
+                    .strip()
+                )
                 m1 = await self._send_and_wait(bot_username, "/start")
                 trace.append(self._serialize_msg("1: /start", m1))
                 m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Numbers") if m1 else None
                 trace.append(self._serialize_msg("2: Get Numbers", m2))
                 m3 = await self._click_and_wait(bot_username, m2, text_contains="whats") if m2 else None
                 trace.append(self._serialize_msg("3: WhatsApp", m3))
-                msg = await self._click_and_wait(bot_username, m3, text_contains="cambodia") if m3 else None
-                trace.append(self._serialize_msg(f"4: {target_country}", msg))
+                if m3:
+                    target_btn = self._find_button_rc(m3, [clean_target])
+                    if target_btn:
+                        msg = await self._click_and_wait(bot_username, m3, rc=target_btn)
+                    else:
+                        msg = None
+                        trace.append({"step": f"4: {target_country}", "error": f"الدولة {target_country} غير متوفرة حالياً في البوت"})
+                else:
+                    msg = None
+                if msg:
+                    trace.append(self._serialize_msg(f"4: {target_country}", msg))
 
             elif bot_username == "seven1tel_Number_Bot":
                 target_country = country or "Egypt"
@@ -746,7 +780,7 @@ class TelegramNumberManager:
             state.active_country = None
             state.numbers = []
 
-    def _cleanup_expired_locks(self, ttl_seconds: int = 180):
+    def _cleanup_expired_locks(self, ttl_seconds: int = 60):
         now = time.time()
         for state in self.bots.values():
             if state.locked:
