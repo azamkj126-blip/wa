@@ -235,6 +235,22 @@ NAV_KEYWORDS = [
     "قروب",
     "group",
     "otp group",
+    "facebook",
+    "whatsapp",
+    "tiktok",
+    "imo",
+    "instagram",
+    "telegram",
+    "viber",
+    "google",
+    "twitter",
+    "snapchat",
+    "amazon",
+    "authmsg",
+    "blocco19",
+    "boomerang",
+    "openfiber",
+    "shein",
 ]
 
 BUSY_KEYWORDS = [
@@ -796,7 +812,7 @@ class TelegramNumberManager:
                     break
                 if click_task.done():
                     try:
-                        await asyncio.wait_for(asyncio.shield(fut), timeout=remaining)
+                        await asyncio.wait_for(asyncio.shield(fut), timeout=min(remaining, 3.0))
                     except asyncio.TimeoutError:
                         pass
                     break
@@ -806,10 +822,27 @@ class TelegramNumberManager:
                     return_when=asyncio.FIRST_COMPLETED,
                 )
 
-            if not fut.done():
-                return None
+            res = None
+            if fut.done():
+                res = fut.result()
+            elif click_task.done() and not click_task.cancelled():
+                try:
+                    c_res = click_task.result()
+                    if isinstance(c_res, Message) and c_res.buttons:
+                        res = c_res
+                except Exception:
+                    pass
 
-            res = fut.result()
+            if not res:
+                try:
+                    latest = await self.client.get_messages(entity, limit=1)
+                    if latest and latest[0].buttons and self._button_signature(latest[0]) != prev_sig:
+                        res = latest[0]
+                except Exception:
+                    pass
+
+            if not res:
+                return None
             if res and not res.buttons and not self._extract_phones_from_msg(res):
                 fut2 = loop.create_future()
 
@@ -925,6 +958,11 @@ class TelegramNumberManager:
             if not wa_rc:
                 return None
             m2 = await self._click_and_wait(bot_username, m1, rc=wa_rc, timeout=8)
+            if not m2:
+                try:
+                    m2 = await self._click_and_wait(bot_username, m1, text_contains="what", timeout=8)
+                except Exception:
+                    pass
             asyncio.create_task(self._ensure_joined_channel("Cloud_Number2"))
             return m2
 
@@ -946,6 +984,11 @@ class TelegramNumberManager:
             if not wa_rc:
                 return None
             m3 = await self._click_and_wait(bot_username, m2, rc=wa_rc, timeout=8)
+            if not m3:
+                try:
+                    m3 = await self._click_and_wait(bot_username, m2, text_contains="what", timeout=8)
+                except Exception:
+                    pass
             return m3
 
         elif bot_username in ("B_M_Numbers_3OTP_bot", "B_M_Numbers_Files_bot"):
