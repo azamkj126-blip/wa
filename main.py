@@ -124,3 +124,12 @@ async def trigger_scan():
 async def release_bot(bot_username: str):
     manager.release_bot(bot_username)
     return {"status": "released", "bot": bot_username}
+
+
+@app.get("/clean_groups")
+@app.post("/clean_groups")
+async def clean_groups():
+    if not manager.authorized:
+        raise HTTPException(status_code=400, detail="جلسة تليجرام غير مصرح بها حالياً")
+    return await manager.clean_groups()
+

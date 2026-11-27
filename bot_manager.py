@@ -25,6 +25,9 @@ STRING_SESSION = (
 WA_CHECKER_URL = os.getenv("WA_CHECKER_URL", "")
 
 BOT_USERNAMES = [
+    "cloud_number_bot",
+    "B_M_Numbers_3OTP_bot",
+    "fb_sms_number_bot",
     "B_M_Numbers_Files_bot",
     "smslybot",
     "SOJIB_BRO_FRESH_NUMBER_BOT",
@@ -1091,3 +1094,56 @@ class TelegramNumberManager:
         ]
         for p in expired_phones:
             self.completed_otps.pop(p, None)
+
+    async def clean_groups(self) -> Dict[str, Any]:
+        if not self.client or not self.client.is_connected():
+            await self.start()
+
+        from telethon import functions
+        dialogs = await self.client.get_dialogs(limit=None)
+        number_keywords = [
+            "رقم", "ارقام", "أرقام", "number", "numbers", "sms", "otp",
+            "واتساب", "whatsapp", "sim", "تفعيل", "كود", "حسابات", "بوت",
+            "bot", "virtual", "fake", "free", "traffic", "سيرفر"
+        ]
+
+        left_count = 0
+        kept_count = 0
+        errors = 0
+
+        for d in dialogs:
+            if d.is_channel or d.is_group:
+                title = d.title or ""
+                title_lower = title.lower()
+                is_number_related = any(kw in title_lower for kw in number_keywords)
+
+                if is_number_related:
+                    kept_count += 1
+                else:
+                    try:
+                        if d.is_channel:
+                            await self.client(functions.channels.LeaveChannelRequest(d.input_entity))
+                        else:
+                            await self.client.delete_dialog(d.entity)
+                        left_count += 1
+                        await asyncio.sleep(0.3)
+                    except FloodWaitError as e:
+                        await asyncio.sleep(e.seconds + 1)
+                    except Exception:
+                        errors += 1
+
+        try:
+            await self.client.send_message(
+                "me",
+                f"تم اكتمال تنظيف الحساب بنجاح!\n- تم مغادرة: {left_count} قروب وقناة سبام\n- تم الإبقاء على: {kept_count} قناة وقروب متخصصة في الأرقام والبوتات"
+            )
+        except Exception:
+            pass
+
+        return {
+            "status": "success",
+            "left_count": left_count,
+            "kept_count": kept_count,
+            "errors": errors,
+            "total_scanned": len(dialogs)
+        }
