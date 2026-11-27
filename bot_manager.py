@@ -277,74 +277,6 @@ BUSY_KEYWORDS = [
 ]
 
 
-DEFAULT_BOT_COUNTRIES: Dict[str, List[dict]] = {
-    "cloud_number_bot": [
-        {"country": "Yemen", "ar": "اليمن", "iso": "YE", "bot": "cloud_number_bot", "raw_button": "Yemen (+967)", "clean_key": "yemen"},
-        {"country": "Sudan", "ar": "السودان", "iso": "SD", "bot": "cloud_number_bot", "raw_button": "Sudan (+249)", "clean_key": "sudan"},
-    ],
-    "fb_sms_number_bot": [
-        {"country": "Côte d'Ivoire", "ar": "كوت ديفوار", "iso": "CI", "bot": "fb_sms_number_bot", "raw_button": "Côte d'Ivoire", "clean_key": "côte d'ivoire"},
-        {"country": "Togo", "ar": "توغو", "iso": "TG", "bot": "fb_sms_number_bot", "raw_button": "Togo", "clean_key": "togo"},
-    ],
-    "seven1tel_Number_Bot": [
-        {"country": "Côte d'Ivoire", "ar": "كوت ديفوار", "iso": "CI", "bot": "seven1tel_Number_Bot", "raw_button": "Côte d'Ivoire WS", "clean_key": "côte d'ivoire"},
-        {"country": "Togo", "ar": "توغو", "iso": "TG", "bot": "seven1tel_Number_Bot", "raw_button": "Togo WS", "clean_key": "togo"},
-        {"country": "Egypt", "ar": "مصر", "iso": "EG", "bot": "seven1tel_Number_Bot", "raw_button": "Egypt WS", "clean_key": "egypt"},
-        {"country": "Germany", "ar": "ألمانيا", "iso": "DE", "bot": "seven1tel_Number_Bot", "raw_button": "Germany WS", "clean_key": "germany"},
-        {"country": "Kazakhstan", "ar": "كازاخستان", "iso": "KZ", "bot": "seven1tel_Number_Bot", "raw_button": "Kazakhstan WS", "clean_key": "kazakhstan"},
-        {"country": "Kazakhstan (Server 2)", "ar": "كازاخستان (سيرفر 2)", "iso": "KZ", "bot": "seven1tel_Number_Bot", "raw_button": "Kazakhstan WS 2", "clean_key": "kazakhstan"},
-        {"country": "Iran", "ar": "إيران", "iso": "IR", "bot": "seven1tel_Number_Bot", "raw_button": "Iran WS", "clean_key": "iran"},
-        {"country": "Tanzania", "ar": "تانزانيا", "iso": "TZ", "bot": "seven1tel_Number_Bot", "raw_button": "Tanzania WS", "clean_key": "tanzania"},
-        {"country": "Tanzania (Server 2)", "ar": "تانزانيا (سيرفر 2)", "iso": "TZ", "bot": "seven1tel_Number_Bot", "raw_button": "Tanzania WS 2", "clean_key": "tanzania"},
-        {"country": "Malawi", "ar": "مالاوي", "iso": "MW", "bot": "seven1tel_Number_Bot", "raw_button": "Malawi WS", "clean_key": "malawi"},
-        {"country": "United Kingdom (Server 2)", "ar": "بريطانيا (سيرفر 2)", "iso": "GB", "bot": "seven1tel_Number_Bot", "raw_button": "Ukraine WS 2", "clean_key": "united kingdom"},
-        {"country": "Haiti", "ar": "هايتي", "iso": "HT", "bot": "seven1tel_Number_Bot", "raw_button": "Haiti WS", "clean_key": "haiti"},
-        {"country": "Cambodia", "ar": "كمبوديا", "iso": "KH", "bot": "seven1tel_Number_Bot", "raw_button": "Cambodia WS", "clean_key": "cambodia"},
-        {"country": "Iraq", "ar": "العراق", "iso": "IQ", "bot": "seven1tel_Number_Bot", "raw_button": "IRAQ WS", "clean_key": "iraq"},
-        {"country": "Nepal", "ar": "نيبال", "iso": "NP", "bot": "seven1tel_Number_Bot", "raw_button": "Nepal WS", "clean_key": "nepal"},
-        {"country": "Georgia", "ar": "جورجيا", "iso": "GE", "bot": "seven1tel_Number_Bot", "raw_button": "Georgia WS", "clean_key": "georgia"},
-    ],
-    "smslybot": [
-        {"country": "Côte d'Ivoire", "ar": "كوت ديفوار", "iso": "CI", "bot": "smslybot", "raw_button": "Cote d'Ivoire", "clean_key": "cote d'ivoire"},
-        {"country": "Guinea", "ar": "غينيا", "iso": "GN", "bot": "smslybot", "raw_button": "Guinea", "clean_key": "guinea"},
-        {"country": "Maldives", "ar": "المالديف", "iso": "MV", "bot": "smslybot", "raw_button": "Maldives", "clean_key": "maldives"},
-        {"country": "Mali", "ar": "مالي", "iso": "ML", "bot": "smslybot", "raw_button": "Mali", "clean_key": "mali"},
-        {"country": "Mali (Server 2)", "ar": "مالي (سيرفر 2)", "iso": "ML", "bot": "smslybot", "raw_button": "Mali 2", "clean_key": "mali"},
-        {"country": "Senegal", "ar": "السنغال", "iso": "SN", "bot": "smslybot", "raw_button": "Senegal", "clean_key": "senegal"},
-        {"country": "Yemen", "ar": "اليمن", "iso": "YE", "bot": "smslybot", "raw_button": "Yemen", "clean_key": "yemen"},
-    ],
-    "SOJIB_BRO_FRESH_NUMBER_BOT": [
-        {"country": "United Kingdom", "ar": "بريطانيا", "iso": "GB", "bot": "SOJIB_BRO_FRESH_NUMBER_BOT", "raw_button": "UNITED KINGDOM (GB)", "clean_key": "united kingdom"},
-    ],
-    "B_M_Numbers_Files_bot": [
-        {"country": "Sudan", "ar": "السودان", "iso": "SD", "bot": "B_M_Numbers_Files_bot", "raw_button": "Sudan (+249)", "clean_key": "sudan"},
-        {"country": "Yemen", "ar": "اليمن", "iso": "YE", "bot": "B_M_Numbers_Files_bot", "raw_button": "Yemen (+967)", "clean_key": "yemen"},
-    ],
-    "B_M_Numbers_3OTP_bot": [
-        {"country": "Sudan", "ar": "السودان", "iso": "SD", "bot": "B_M_Numbers_3OTP_bot", "raw_button": "Sudan (+249)", "clean_key": "sudan"},
-        {"country": "Yemen", "ar": "اليمن", "iso": "YE", "bot": "B_M_Numbers_3OTP_bot", "raw_button": "Yemen (+967)", "clean_key": "yemen"},
-    ],
-    "NumberNest_2_Bot": [
-        {"country": "Guinea (Server 1)", "ar": "غينيا (سيرفر 1)", "iso": "GN", "bot": "NumberNest_2_Bot", "raw_button": "Guinea 1", "clean_key": "guinea"},
-        {"country": "Afghanistan", "ar": "أفغانستان", "iso": "AF", "bot": "NumberNest_2_Bot", "raw_button": "Afghanistan Whats", "clean_key": "afghanistan"},
-        {"country": "Belgium", "ar": "بلجيكا", "iso": "BE", "bot": "NumberNest_2_Bot", "raw_button": "Belgium", "clean_key": "belgium"},
-        {"country": "Ghana", "ar": "غانا", "iso": "GH", "bot": "NumberNest_2_Bot", "raw_button": "Ghana", "clean_key": "ghana"},
-        {"country": "Iraq (Server 1)", "ar": "العراق (سيرفر 1)", "iso": "IQ", "bot": "NumberNest_2_Bot", "raw_button": "Iraq 1", "clean_key": "iraq"},
-        {"country": "Italy (Server 1)", "ar": "إيطاليا (سيرفر 1)", "iso": "IT", "bot": "NumberNest_2_Bot", "raw_button": "Italy 1", "clean_key": "italy"},
-        {"country": "Malawi", "ar": "مالاوي", "iso": "MW", "bot": "NumberNest_2_Bot", "raw_button": "Malawi", "clean_key": "malawi"},
-        {"country": "Mali", "ar": "مالي", "iso": "ML", "bot": "NumberNest_2_Bot", "raw_button": "Mali", "clean_key": "mali"},
-        {"country": "Palestine", "ar": "فلسطين", "iso": "PS", "bot": "NumberNest_2_Bot", "raw_button": "Palestine", "clean_key": "palestine"},
-        {"country": "Syria", "ar": "سوريا", "iso": "SY", "bot": "NumberNest_2_Bot", "raw_button": "Syria", "clean_key": "syria"},
-        {"country": "Uzbekistan", "ar": "أوزبكستان", "iso": "UZ", "bot": "NumberNest_2_Bot", "raw_button": "Uzbekistan", "clean_key": "uzbekistan"},
-    ],
-    "JXOTPBot": [
-        {"country": "Cambodia", "ar": "كمبوديا", "iso": "KH", "bot": "JXOTPBot", "raw_button": "Cambodia", "clean_key": "cambodia"},
-        {"country": "Nepal", "ar": "نيبال", "iso": "NP", "bot": "JXOTPBot", "raw_button": "Nepal", "clean_key": "nepal"},
-        {"country": "Vietnam", "ar": "فيتنام", "iso": "VN", "bot": "JXOTPBot", "raw_button": "Vietnam", "clean_key": "vietnam"},
-    ],
-}
-
-
 @dataclass
 class NumberItem:
     phone: str
@@ -380,9 +312,7 @@ class TelegramNumberManager:
         self._startup_task: Optional[asyncio.Task] = None
         self._scanner_task: Optional[asyncio.Task] = None
         self.http = httpx.AsyncClient(timeout=10.0)
-        self._discovered_countries: Dict[str, List[dict]] = {
-            b: [dict(item) for item in DEFAULT_BOT_COUNTRIES.get(b, [])] for b in BOT_USERNAMES
-        }
+        self._discovered_countries: Dict[str, List[dict]] = {b: [] for b in BOT_USERNAMES}
         self.completed_otps: Dict[str, dict] = {}
         self._last_scan_time: float = 0.0
         self._scan_lock = asyncio.Lock()
@@ -1115,6 +1045,13 @@ class TelegramNumberManager:
 
         elif bot_username == "smslybot":
             m1 = await self._send_and_wait(bot_username, "Get Number", timeout=8)
+            if not m1 or not m1.buttons:
+                m_start = await self._send_and_wait(bot_username, "/start", timeout=8)
+                gn_btn = self._find_button_rc(m_start, ["get number", "طلب رقم"])
+                if gn_btn:
+                    m1 = await self._click_and_wait(bot_username, m_start, rc=gn_btn, timeout=8)
+                else:
+                    m1 = await self._send_and_wait(bot_username, "Get Number", timeout=8)
             if not m1:
                 return None
             return await self._click_and_wait(bot_username, m1, text_contains="WhatsApp", timeout=8)
@@ -1123,34 +1060,44 @@ class TelegramNumberManager:
             m1 = await self._send_and_wait(bot_username, "/start", timeout=8)
             if not m1:
                 return None
+            wa_rc = self._find_button_rc(m1, ["whatsapp", "whats", "واتس", "واتساب"])
+            if wa_rc:
+                return await self._click_and_wait(bot_username, m1, rc=wa_rc, timeout=8)
             m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Number", timeout=8)
-            if not m2:
-                return None
-            return await self._click_and_wait(bot_username, m2, text_contains="WHATSAPP", timeout=8)
+            if m2:
+                return await self._click_and_wait(bot_username, m2, text_contains="WHATSAPP", timeout=8)
+            return None
 
         elif bot_username == "NumberNest_2_Bot":
             m1 = await self._send_and_wait(bot_username, "/start", timeout=8)
             if not m1:
                 return None
-            if self._find_button_rc(m1, ["Get Number"]):
-                m1 = await self._click_and_wait(bot_username, m1, text_contains="Get Number", timeout=8)
             wa_btn = self._find_button_rc(m1, ["WhatsApp", "whatsapp", "واتس"])
             if wa_btn:
                 m2 = await self._click_and_wait(bot_username, m1, rc=wa_btn, timeout=8)
                 if m2 and m2.buttons:
                     return m2
-            return m1
+            if self._find_button_rc(m1, ["Get Number"]):
+                m1_gn = await self._click_and_wait(bot_username, m1, text_contains="Get Number", timeout=8)
+                if m1_gn:
+                    wa_btn = self._find_button_rc(m1_gn, ["WhatsApp", "whatsapp", "واتس"])
+                    if wa_btn:
+                        return await self._click_and_wait(bot_username, m1_gn, rc=wa_btn, timeout=8)
+            return None
 
         elif bot_username == "JXOTPBot":
             m1 = await self._send_and_wait(bot_username, "/start", timeout=8)
             if not m1:
                 return None
+            wa_btn = self._find_button_rc(m1, ["whatsapp", "whats", "واتس"])
+            if wa_btn:
+                return await self._click_and_wait(bot_username, m1, rc=wa_btn, timeout=8)
             m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Numbers", timeout=8)
             if not m2:
                 m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Number", timeout=8)
-            if not m2:
-                return None
-            return await self._click_and_wait(bot_username, m2, text_contains="whats", timeout=8)
+            if m2:
+                return await self._click_and_wait(bot_username, m2, text_contains="whats", timeout=8)
+            return None
 
         elif bot_username == "seven1tel_Number_Bot":
             m1 = await self._send_and_wait(bot_username, "/start", timeout=8)
