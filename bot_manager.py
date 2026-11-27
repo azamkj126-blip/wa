@@ -13,9 +13,9 @@ from telethon.tl.types import ReplyInlineMarkup, ReplyKeyboardMarkup
 
 API_ID = int(os.getenv("TG_API_ID", "35177791"))
 API_HASH = os.getenv("TG_API_HASH", "25b0e654c1c1202707167407e4d21d3f")
-_NEW_VERIFIED_SESSION = "1BJWap1wBuzKVJx_sCqJW1wqkerHTNvcGsjDaW3m_sbNlZPqL0X6joYIB-1V5Z8fU6Q7zZIdsS8E5adi_GGcnTzaXzYYPiU64adjgh_TN7vNn6JjNd88qIbOKyR4jJsEA4Sa4dIUeVIXYcKb9692J2-XiJIfYrXph46QaS50ZRb2uoRi3tZW81TPHKU8ibyjsdCNmgmiktT91lZJDcEG_9zfNA7244rZs3XtvmScLNxkkhRncl3jgpwHiCGMyIj0gsTuKBfVdSPVGPpetOMbYGliFvFLkiP6Pgvw-449SNgosqN3exlhpD04zcUPweb8R5n-LNhJYwop-65BnfqZSTbzoUA-pX6o="
+_NEW_VERIFIED_SESSION = "1BJWap1wBuwSc1KYJ2jV8Ms-UXSjShfCi1e5B113Pw2nddtieII6yvYWhlxVLb2Ir4poqhLgYBPEwIwzET82MO6aneGvBmVoHmuNTDSlo8uznrPSo_tS8sBb0zxgAR63VXkIMnA_4hP5zIN-aj05ddAfEcEnyEdYf5tdy36wD8wdIK3EEvwKWGElMSZnljz_rdKFDR3XpS8UjiS-rBrQ4JGAsudTVrJetucLdzaGeRPbmFc8s9Gsb0cp9FzncogmJwp3BvZ6fHJDzPc1Mgzgf_NiATRN_KQdwo_joUR03xLDxTiMQ89AmR7tmqz95aB70DwE9I3XwMmtnr15Eedd0PnqQx5GvYlA="
 _raw_session = os.getenv("TG_STRING_SESSION", "").strip()
-if not _raw_session or not _raw_session.startswith("1BJWap1wBuzKVJx"):
+if not _raw_session or not _raw_session.startswith("1BJWap1wBuwSc1KY"):
     _raw_session = _NEW_VERIFIED_SESSION
 STRING_SESSION = (
     _raw_session + ("=" * ((4 - len(_raw_session[1:]) % 4) % 4))
@@ -267,6 +267,9 @@ class TelegramNumberManager:
         self.http = httpx.AsyncClient(timeout=10.0)
         self._discovered_countries: Dict[str, List[dict]] = {b: [] for b in BOT_USERNAMES}
         self.completed_otps: Dict[str, dict] = {}
+        self._last_scan_time: float = 0.0
+        self._scan_lock = asyncio.Lock()
+        self.CACHE_TTL_SECONDS: float = 600.0  # 10 minutes cache TTL
 
     async def start(self, delay_seconds: int = 15):
         self._startup_task = asyncio.create_task(self._delayed_connect(delay_seconds))
@@ -279,7 +282,8 @@ class TelegramNumberManager:
             if self.authorized:
                 self._register_otp_listeners()
                 print("Telegram connected and authorized successfully.")
-                self._scanner_task = asyncio.create_task(self.start_periodic_scanner())
+                # Run an initial scan on startup so countries are populated immediately
+                asyncio.create_task(self.scan_all_bots())
             else:
                 self.last_errors["startup"] = "TG_STRING_SESSION منتهية أو ملغاة، تحتاج تجديد"
                 print("ERROR: TG_STRING_SESSION is invalid or revoked.")
@@ -366,25 +370,21 @@ class TelegramNumberManager:
         lowered = text.lower()
         return any(k in lowered for k in NAV_KEYWORDS)
 
-    async def start_periodic_scanner(self):
-        await asyncio.sleep(10)
-        while True:
-            if not self.authorized:
-                print("Periodic scanner paused: telegram not authorized.")
-                await asyncio.sleep(60)
-                continue
-            try:
-                await self.scan_all_bots()
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                print(f"Error in periodic scanner: {e}")
-            await asyncio.sleep(300)
+    async def _safe_scan_catalog(self):
+        if not self.authorized:
+            return
+        async with self._scan_lock:
+            now = time.time()
+            has_countries = any(len(c) > 0 for c in self._discovered_countries.values())
+            if has_countries and (now - self._last_scan_time) < self.CACHE_TTL_SECONDS:
+                return
+            print("10-minute cache window expired or empty: refreshing countries dynamically from bots...")
+            await self.scan_all_bots()
 
     async def scan_all_bots(self):
         if not self.authorized:
             return
-        print("Periodic scan: scanning available countries across bots...")
+        print("Scanning live available countries across all 6 bots...")
         for bot in BOT_USERNAMES:
             if not self.authorized:
                 break
@@ -401,13 +401,13 @@ class TelegramNumberManager:
                 countries = await asyncio.wait_for(self._scan_single_bot(bot), timeout=25.0)
                 if countries:
                     self._discovered_countries[bot] = countries
-                    print(f"Periodic scan: {bot} has {len(countries)} countries available.")
+                    print(f"Scan result: {bot} has {len(countries)} live countries.")
             except AuthKeyUnregisteredError:
                 self.authorized = False
-                print("Periodic scan: AuthKeyUnregisteredError, Telegram session has been revoked.")
+                print("Scan: AuthKeyUnregisteredError, Telegram session has been revoked.")
                 break
             except Exception as e:
-                print(f"Periodic scan error on {bot}: {e}")
+                print(f"Scan error on {bot}: {e}")
             finally:
                 try:
                     await self._safe_reset_bot(bot)
@@ -419,7 +419,10 @@ class TelegramNumberManager:
                     except Exception:
                         pass
 
-            await asyncio.sleep(6.0)
+            await asyncio.sleep(4.0)
+
+        self._last_scan_time = time.time()
+        print(f"Scan completed. Total countries discovered: {sum(len(c) for c in self._discovered_countries.values())}. Cache valid for 10 minutes.")
 
     async def _scan_single_bot(self, bot_username: str) -> List[dict]:
         msg = await self._navigate_to_country_menu(bot_username)
@@ -441,8 +444,24 @@ class TelegramNumberManager:
                         discovered.append(parsed)
         return discovered
 
-    def get_countries_catalog(self) -> List[dict]:
+    async def get_countries_catalog(self) -> List[dict]:
         self._cleanup_expired_locks(ttl_seconds=300)
+        now = time.time()
+        has_countries = any(len(c) > 0 for c in self._discovered_countries.values())
+        cache_expired = (now - self._last_scan_time) >= self.CACHE_TTL_SECONDS
+
+        # When a user opens the app:
+        # If cache expired (older than 10 minutes) or has no countries:
+        # Scan the bots dynamically. If cache is fresh (<10 min), return same countries instantly!
+        if (cache_expired or not has_countries) and self.authorized:
+            if not has_countries:
+                # First open with empty cache: wait for scan so real countries are returned
+                await self._safe_scan_catalog()
+            else:
+                # Cache expired but we have previous data: refresh in background so response is instantaneous
+                if not self._scan_lock.locked():
+                    asyncio.create_task(self._safe_scan_catalog())
+
         result = []
         seen = set()
         for bot in BOT_USERNAMES:

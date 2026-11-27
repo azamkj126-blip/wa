@@ -34,7 +34,7 @@ async def health():
 
 @app.get("/countries")
 async def get_countries():
-    return {"countries": manager.get_countries_catalog()}
+    return {"countries": await manager.get_countries_catalog()}
 
 
 @app.get("/numbers")
