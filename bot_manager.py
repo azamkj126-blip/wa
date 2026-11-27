@@ -681,7 +681,9 @@ class TelegramNumberManager:
             for r, row in enumerate(msg.buttons):
                 for c, btn in enumerate(row):
                     b_type = type(getattr(btn, "button", btn)).__name__
-                    btns.append(f"[{r},{c}] ({b_type}) {btn.text}")
+                    b_data = getattr(getattr(btn, "button", None), "data", None)
+                    data_str = f" data={b_data.decode('utf-8', errors='ignore')}" if b_data else ""
+                    btns.append(f"[{r},{c}] ({b_type}{data_str}) {btn.text}")
         return {
             "step": step,
             "text": (msg.raw_text or "")[:200],
@@ -949,6 +951,7 @@ class TelegramNumberManager:
             m1 = await self._send_and_wait(bot_username, "/start", timeout=8)
             if not m1:
                 return None
+            self.last_trace[bot_username].append(self._serialize_msg("Start Response", m1))
             wa_rc = self._find_button_rc(m1, ["whatsapp", "whats", "واتس", "واتساب"])
             if not wa_rc and m1.buttons:
                 for r_idx, row in enumerate(m1.buttons):
@@ -969,6 +972,7 @@ class TelegramNumberManager:
                     m2 = await self._click_and_wait(bot_username, m1, text_contains="what", timeout=12)
                 except Exception:
                     pass
+            self.last_trace[bot_username].append(self._serialize_msg(f"Clicked WhatsApp {wa_rc}", m2))
             asyncio.create_task(self._ensure_joined_channel("Cloud_Number2"))
             return m2
 
