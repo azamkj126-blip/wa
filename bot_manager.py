@@ -13,9 +13,9 @@ from telethon.tl.types import ReplyInlineMarkup, ReplyKeyboardMarkup
 
 API_ID = int(os.getenv("TG_API_ID", "35177791"))
 API_HASH = os.getenv("TG_API_HASH", "25b0e654c1c1202707167407e4d21d3f")
-_NEW_VERIFIED_SESSION = "1BJWap1wBuwSc1KYJ2jV8Ms-UXSjShfCi1e5B113Pw2nddtieII6yvYWhlxVLb2Ir4poqhLgYBPEwIwzET82MO6aneGvBmVoHmuNTDSlo8uznrPSo_tS8sBb0zxgAR63VXkIMnA_4hP5zIN-aj05ddAfEcEnyEdYf5tdy36wD8wdIK3EEvwKWGElMSZnljz_rdKFDR3XpS8UjiS-rBrQ4JGAsudTVrJetucLdzaGeRPbmFc8s9Gsb0cp9FzncogmJwp3BvZ6fHJDzPc1Mgzgf_NiATRN_KQdwo_joUR03xLDxTiMQ89AmR7tmqz95aB70DwE9I3XwMmtnr15Eedd0PnqQx5GvYlA="
+_NEW_VERIFIED_SESSION = "1BJWap1wBuyOMivhpY7uzhxYpHYfC5vxyjlhterbwgSTAnorKG3Uq3GAsMnPrjYjHRnubyBE4chQlM9DvsauMLrYe2E5LsWHDPPBW2KqGh0GIdLVF3WsbBMT2lzXfmWEC0RhdH3rLb1Mt8qSDgksZ7vFpqE08CuGs2olf-xt7WgnveHLp0ikVLl5eehBUebWyIwJwbdRkf1uyeq_zpDNsUtndPVYdWGqBUbIkqYVFl9yMz9hDnHYL8gIC8-q2RZ7QUfLTZwM-9URREUvjpSrxsR6mChJ_1dK0DyopZ_rGYZPYTwV4T0L6Y77r7NSrQI3FnYkIR5rOoXXKVaJdW9M_Pil7raNfk3U="
 _raw_session = os.getenv("TG_STRING_SESSION", "").strip()
-if not _raw_session or not _raw_session.startswith("1BJWap1wBuwSc1KY"):
+if not _raw_session or not _raw_session.startswith("1BJWap1wBuyOM"):
     _raw_session = _NEW_VERIFIED_SESSION
 STRING_SESSION = (
     _raw_session + ("=" * ((4 - len(_raw_session[1:]) % 4) % 4))
