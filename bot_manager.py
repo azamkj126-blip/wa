@@ -952,9 +952,23 @@ class TelegramNumberManager:
             if not m1:
                 return None
             self.last_trace[bot_username].append(self._serialize_msg("Start Response", m1))
-            wa_rc = self._find_button_rc(m1, ["whatsapp", "whats", "واتس", "واتساب"])
-            if not wa_rc and m1.buttons:
-                for r_idx, row in enumerate(m1.buttons):
+
+            # Step 1: Click "الحصول على رقم" / "Get Number" to reveal platforms
+            gn_rc = self._find_button_rc(m1, ["الحصول على رقم", "طلب رقم", "get number", "رقم جديد"])
+            if gn_rc:
+                m2 = await self._click_and_wait(bot_username, m1, rc=gn_rc, timeout=8)
+            else:
+                m2 = await self._send_and_wait(bot_username, "الحصول على رقم", timeout=8)
+
+            if not m2:
+                # If bot already showed platforms in m1
+                m2 = m1
+            self.last_trace[bot_username].append(self._serialize_msg("Platforms Menu", m2))
+
+            # Step 2: Now find and click WhatsApp on the platforms menu
+            wa_rc = self._find_button_rc(m2, ["whatsapp", "whats", "واتس", "واتساب"])
+            if not wa_rc and m2.buttons:
+                for r_idx, row in enumerate(m2.buttons):
                     for c_idx, btn in enumerate(row):
                         b_txt = (btn.text or "").lower()
                         if "what" in b_txt or "واتس" in b_txt:
@@ -963,18 +977,17 @@ class TelegramNumberManager:
                     if wa_rc:
                         break
             if not wa_rc:
-                wa_rc = self._find_first_non_back_rc(m1)
-            if not wa_rc:
-                return None
-            m2 = await self._click_and_wait(bot_username, m1, rc=wa_rc, timeout=12)
-            if not m2:
+                wa_rc = (1, 0) # Fallback to [1,0] which is WhatsApp (1625)
+
+            m3 = await self._click_and_wait(bot_username, m2, rc=wa_rc, timeout=12)
+            if not m3:
                 try:
-                    m2 = await self._click_and_wait(bot_username, m1, text_contains="what", timeout=12)
+                    m3 = await self._click_and_wait(bot_username, m2, text_contains="what", timeout=12)
                 except Exception:
                     pass
-            self.last_trace[bot_username].append(self._serialize_msg(f"Clicked WhatsApp {wa_rc}", m2))
+            self.last_trace[bot_username].append(self._serialize_msg(f"Clicked WhatsApp {wa_rc}", m3))
             asyncio.create_task(self._ensure_joined_channel("Cloud_Number2"))
-            return m2
+            return m3
 
         elif bot_username == "fb_sms_number_bot":
             m1 = await self._send_and_wait(bot_username, "/start", timeout=8)
