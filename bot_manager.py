@@ -277,6 +277,16 @@ BUSY_KEYWORDS = [
 ]
 
 
+def _matches_keyword(text: str, kw: str) -> bool:
+    kw = (kw or "").strip().lower()
+    text = (text or "").lower()
+    if not kw or not text:
+        return False
+    if len(kw) <= 3:
+        return bool(re.search(r"\b" + re.escape(kw) + r"\b", text))
+    return kw in text
+
+
 @dataclass
 class NumberItem:
     phone: str
@@ -420,7 +430,7 @@ class TelegramNumberManager:
         lowered = cleaned.lower()
         for key, (en, ar, iso) in sorted(COUNTRY_DB.items(), key=lambda x: len(x[0]), reverse=True):
             aliases = COUNTRY_ALIASES.get(key, [])
-            if key in lowered or ar.lower() in lowered or any(a in lowered for a in aliases):
+            if _matches_keyword(lowered, key) or _matches_keyword(lowered, ar) or any(_matches_keyword(lowered, a) for a in aliases):
                 return {
                     "country": f"{en}{server_label}",
                     "ar": f"{ar}{server_label_ar}",
@@ -474,11 +484,8 @@ class TelegramNumberManager:
 
             try:
                 countries = await asyncio.wait_for(self._scan_single_bot(bot), timeout=25.0)
-                if countries:
-                    existing = {item["country"]: item for item in self._discovered_countries.get(bot, [])}
-                    for c in countries:
-                        existing[c["country"]] = c
-                    self._discovered_countries[bot] = list(existing.values())
+                if countries is not None:
+                    self._discovered_countries[bot] = countries
                     print(f"Scan result: {bot} has {len(self._discovered_countries[bot])} live countries.")
             except AuthKeyUnregisteredError:
                 self.authorized = False
@@ -726,8 +733,8 @@ class TelegramNumberManager:
                 continue
             for r_idx, row in enumerate(msg.buttons):
                 for c_idx, btn in enumerate(row):
-                    btn_text = (btn.text or "").strip().lower()
-                    if kw_clean in btn_text:
+                    btn_text = (btn.text or "").strip()
+                    if _matches_keyword(btn_text, kw_clean):
                         return (r_idx, c_idx)
         return None
 
@@ -864,12 +871,31 @@ class TelegramNumberManager:
                     pass
 
             if not res:
-                try:
-                    latest = await self.client.get_messages(entity, limit=1)
-                    if latest and latest[0].buttons and self._button_signature(latest[0]) != prev_sig:
-                        res = latest[0]
-                except Exception:
-                    pass
+                # Active polling for edited inline messages or new messages
+                poll_deadline = loop.time() + 6.0
+                while loop.time() < poll_deadline:
+                    await asyncio.sleep(0.4)
+                    try:
+                        if getattr(msg, "id", None):
+                            by_id = await self.client.get_messages(entity, ids=msg.id)
+                            if by_id and (
+                                (by_id.buttons and self._button_signature(by_id) != prev_sig)
+                                or self._extract_phones_from_msg(by_id)
+                            ):
+                                res = by_id
+                                break
+                        latest = await self.client.get_messages(entity, limit=2)
+                        for l_msg in (latest or []):
+                            if l_msg and (
+                                (l_msg.buttons and self._button_signature(l_msg) != prev_sig)
+                                or self._extract_phones_from_msg(l_msg)
+                            ):
+                                res = l_msg
+                                break
+                        if res:
+                            break
+                    except Exception:
+                        pass
 
             if not res:
                 return None
@@ -1063,7 +1089,11 @@ class TelegramNumberManager:
                 return None
             wa_rc = self._find_button_rc(m1, ["whatsapp", "whats", "واتس", "واتساب"])
             if wa_rc:
-                return await self._click_and_wait(bot_username, m1, rc=wa_rc, timeout=8)
+                res = await self._click_and_wait(bot_username, m1, rc=wa_rc, timeout=8)
+                if res and res.buttons:
+                    return res
+            if m1.buttons and any(b in (btn.text or "").lower() for row in m1.buttons for btn in row for b in ["back", "yemen", "kingdom"]):
+                return m1
             m2 = await self._click_and_wait(bot_username, m1, text_contains="Get Number", timeout=8)
             if m2:
                 return await self._click_and_wait(bot_username, m2, text_contains="WHATSAPP", timeout=8)
@@ -1210,7 +1240,16 @@ class TelegramNumberManager:
                     .strip()
                 )
 
-                country_rc = self._find_button_rc(country_menu, [clean_target])
+                country_rc = self._find_button_rc(country_menu, [clean_target, target_country])
+                if not country_rc:
+                    bot_discovered = self._discovered_countries.get(bot_username, [])
+                    for item in bot_discovered:
+                        if item.get("country", "").lower() == target_country.lower():
+                            raw = item.get("raw_button", "")
+                            if raw:
+                                country_rc = self._find_button_rc(country_menu, [raw])
+                                if country_rc:
+                                    break
                 if not country_rc:
                     err = f"الدولة {target_country} غير متوفرة حالياً في البوت"
                     self.last_errors[bot_username] = err
