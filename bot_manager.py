@@ -680,11 +680,12 @@ class TelegramNumberManager:
         if msg.buttons:
             for r, row in enumerate(msg.buttons):
                 for c, btn in enumerate(row):
-                    btns.append(f"[{r},{c}] {btn.text}")
+                    b_type = type(getattr(btn, "button", btn)).__name__
+                    btns.append(f"[{r},{c}] ({b_type}) {btn.text}")
         return {
             "step": step,
             "text": (msg.raw_text or "")[:200],
-            "buttons": btns[:20],
+            "buttons": btns[:30],
         }
 
     def _find_button_rc(self, msg: Optional[Message], keywords: List[str]) -> Optional[Tuple[int, int]]:
@@ -810,17 +811,22 @@ class TelegramNumberManager:
                 remaining = deadline - loop.time()
                 if remaining <= 0:
                     break
-                if click_task.done():
-                    try:
-                        await asyncio.wait_for(asyncio.shield(fut), timeout=min(remaining, 3.0))
-                    except asyncio.TimeoutError:
-                        pass
-                    break
                 await asyncio.wait(
                     {click_task, fut},
                     timeout=remaining,
                     return_when=asyncio.FIRST_COMPLETED,
                 )
+                if fut.done():
+                    break
+                if click_task.done():
+                    remaining2 = deadline - loop.time()
+                    if remaining2 <= 0:
+                        break
+                    try:
+                        await asyncio.wait_for(asyncio.shield(fut), timeout=remaining2)
+                    except asyncio.TimeoutError:
+                        pass
+                    break
 
             res = None
             if fut.done():
@@ -828,7 +834,7 @@ class TelegramNumberManager:
             elif click_task.done() and not click_task.cancelled():
                 try:
                     c_res = click_task.result()
-                    if isinstance(c_res, Message) and c_res.buttons:
+                    if isinstance(c_res, Message) and c_res.buttons and self._button_signature(c_res) != prev_sig:
                         res = c_res
                 except Exception:
                     pass
@@ -957,10 +963,10 @@ class TelegramNumberManager:
                 wa_rc = self._find_first_non_back_rc(m1)
             if not wa_rc:
                 return None
-            m2 = await self._click_and_wait(bot_username, m1, rc=wa_rc, timeout=8)
+            m2 = await self._click_and_wait(bot_username, m1, rc=wa_rc, timeout=12)
             if not m2:
                 try:
-                    m2 = await self._click_and_wait(bot_username, m1, text_contains="what", timeout=8)
+                    m2 = await self._click_and_wait(bot_username, m1, text_contains="what", timeout=12)
                 except Exception:
                     pass
             asyncio.create_task(self._ensure_joined_channel("Cloud_Number2"))
