@@ -26,14 +26,14 @@ WA_CHECKER_URL = os.getenv("WA_CHECKER_URL", "")
 
 BOT_USERNAMES = [
     "cloud_number_bot",
-    "B_M_Numbers_3OTP_bot",
     "fb_sms_number_bot",
-    "B_M_Numbers_Files_bot",
+    "seven1tel_Number_Bot",
+    "NumberNest_2_Bot",
     "smslybot",
     "SOJIB_BRO_FRESH_NUMBER_BOT",
-    "NumberNest_2_Bot",
+    "B_M_Numbers_3OTP_bot",
+    "B_M_Numbers_Files_bot",
     "JXOTPBot",
-    "seven1tel_Number_Bot",
 ]
 
 COUNTRY_DB: Dict[str, Tuple[str, str, str]] = {
@@ -123,6 +123,25 @@ COUNTRY_DB: Dict[str, Tuple[str, str, str]] = {
     "uganda": ("Uganda", "أوغندا", "UG"),
     "angola": ("Angola", "أنغولا", "AO"),
     "cameroon": ("Cameroon", "الكاميرون", "CM"),
+    "south africa": ("South Africa", "جنوب أفريقيا", "ZA"),
+    "mexico": ("Mexico", "المكسيك", "MX"),
+    "chile": ("Chile", "تشيلي", "CL"),
+    "peru": ("Peru", "بيرو", "PE"),
+    "azerbaijan": ("Azerbaijan", "أذربيجان", "AZ"),
+    "armenia": ("Armenia", "أرمينيا", "AM"),
+    "moldova": ("Moldova", "مولدوفا", "MD"),
+    "romania": ("Romania", "رومانيا", "RO"),
+    "czech republic": ("Czech Republic", "التشيك", "CZ"),
+    "czechia": ("Czech Republic", "التشيك", "CZ"),
+    "hungary": ("Hungary", "المجر", "HU"),
+    "portugal": ("Portugal", "البرتغال", "PT"),
+    "austria": ("Austria", "النمسا", "AT"),
+    "switzerland": ("Switzerland", "سويسرا", "CH"),
+    "hong kong": ("Hong Kong", "هونغ كونغ", "HK"),
+    "singapore": ("Singapore", "سنغافورة", "SG"),
+    "israel": ("Israel", "إسرائيل", "IL"),
+    "sri lanka": ("Sri Lanka", "سريلانكا", "LK"),
+    "myanmar": ("Myanmar", "ميانمار", "MM"),
 }
 
 COUNTRY_ALIASES: Dict[str, List[str]] = {
@@ -207,6 +226,15 @@ NAV_KEYWORDS = [
     "الخدمات",
     "القائمة",
     "menu",
+    "بحث",
+    "search",
+    "page",
+    "صفحة",
+    "الرئيسية",
+    "main",
+    "قروب",
+    "group",
+    "otp group",
 ]
 
 BUSY_KEYWORDS = [
@@ -284,6 +312,7 @@ class TelegramNumberManager:
             self.authorized = await self.client.is_user_authorized()
             if self.authorized:
                 self._register_otp_listeners()
+                asyncio.create_task(self._ensure_joined_channel("Cloud_Number2"))
                 print("Telegram connected and authorized successfully.")
                 # Run an initial scan on startup so countries are populated immediately
                 asyncio.create_task(self.scan_all_bots())
@@ -296,6 +325,31 @@ class TelegramNumberManager:
             print(f"Telegram startup error: {e}")
         finally:
             self._ready_event.set()
+
+    async def _ensure_joined_channel(self, channel_or_link: str):
+        if not self.authorized:
+            return
+        try:
+            from telethon import functions
+            clean = channel_or_link.strip().rstrip("/")
+            if "t.me/+" in clean or "joinchat/" in clean:
+                invite_hash = clean.split("+")[-1].split("joinchat/")[-1].split("/")[0].split("?")[0]
+                if invite_hash:
+                    try:
+                        await self.client(functions.messages.ImportChatInviteRequest(invite_hash))
+                        print(f"Joined private OTP group: {invite_hash}")
+                    except Exception:
+                        pass
+            else:
+                username = clean.split("t.me/")[-1].split("/")[-1].split("?")[0].lstrip("@")
+                if username and not username.lower().endswith("bot"):
+                    try:
+                        await self.client(functions.channels.JoinChannelRequest(username))
+                        print(f"Joined public OTP channel: {username}")
+                    except Exception:
+                        pass
+        except Exception as e:
+            print(f"Channel join note ({channel_or_link}): {e}")
 
     async def stop(self):
         if self._startup_task and not self._startup_task.done():
@@ -348,7 +402,8 @@ class TelegramNumberManager:
 
         lowered = cleaned.lower()
         for key, (en, ar, iso) in sorted(COUNTRY_DB.items(), key=lambda x: len(x[0]), reverse=True):
-            if key in lowered:
+            aliases = COUNTRY_ALIASES.get(key, [])
+            if key in lowered or ar.lower() in lowered or any(a in lowered for a in aliases):
                 return {
                     "country": f"{en}{server_label}",
                     "ar": f"{ar}{server_label_ar}",
@@ -516,15 +571,38 @@ class TelegramNumberManager:
                 chat_username = (getattr(sender_chat, "username", "") or "").lower()
 
                 for item in active_items:
-                    last4 = re.sub(r"\D", "", item.phone)[-4:]
+                    item_phone_digits = re.sub(r"\D", "", item.phone)
+                    last4 = item_phone_digits[-4:] if len(item_phone_digits) >= 4 else item_phone_digits
+                    last6 = item_phone_digits[-6:] if len(item_phone_digits) >= 6 else item_phone_digits
+
                     matched = False
-                    if last4 in cleaned_digits_pool:
+                    if item_phone_digits and item_phone_digits in cleaned_digits_pool:
+                        matched = True
+                    elif last6 and last6 in cleaned_digits_pool:
+                        matched = True
+                    elif last4 and last4 in cleaned_digits_pool:
                         matched = True
                     elif chat_username and chat_username == item.bot_username.lower():
                         if not self._is_noise_message(event.message):
                             matched = True
 
                     if matched:
+                        # Extract OTP without confusing it with the phone number
+                        text_without_phone = text
+                        if item_phone_digits:
+                            text_without_phone = text_without_phone.replace(item_phone_digits, "")
+
+                        otp_extracted = (
+                            re.search(r"(?i)(?:code|كود|رمز|otp|whatsapp|واتساب)[^\d]*(\d{3}[-\s]?\d{3})\b", text_without_phone)
+                            or re.search(r"(?i)(?:code|كود|رمز|otp|whatsapp|واتساب)[^\d]*(\d{4,8})\b", text_without_phone)
+                            or re.search(r"\b(\d{3}[-\s]\d{3})\b", text_without_phone)
+                            or re.search(r"\b(\d{6})\b", text_without_phone)
+                            or otp_match
+                        )
+                        if not otp_extracted:
+                            continue
+
+                        clean_otp = re.sub(r"\D", "", otp_extracted.group(1))
                         item.otp_code = clean_otp
                         item.status = "COMPLETED"
                         self.completed_otps[item.phone] = {
@@ -540,7 +618,7 @@ class TelegramNumberManager:
                             bot_state.locked = False
                             bot_state.locked_at = 0.0
                             bot_state.active_country = None
-                            print(f"OTP received for {item.phone}! Bot {item.bot_username} unlocked immediately.")
+                            print(f"OTP received for {item.phone}: {clean_otp}! Bot {item.bot_username} unlocked immediately.")
                             asyncio.create_task(self._safe_reset_bot(item.bot_username))
                         return
             except Exception:
@@ -828,8 +906,52 @@ class TelegramNumberManager:
         return fresh
 
     async def _navigate_to_country_menu(self, bot_username: str) -> Optional[Message]:
-        if bot_username == "B_M_Numbers_Files_bot":
+        if bot_username == "cloud_number_bot":
+            m1 = await self._send_and_wait(bot_username, "/start", timeout=8)
+            if not m1:
+                return None
+            wa_rc = self._find_button_rc(m1, ["whatsapp", "whats", "واتس", "واتساب"])
+            if not wa_rc and m1.buttons:
+                for r_idx, row in enumerate(m1.buttons):
+                    for c_idx, btn in enumerate(row):
+                        b_txt = (btn.text or "").lower()
+                        if "what" in b_txt or "واتس" in b_txt:
+                            wa_rc = (r_idx, c_idx)
+                            break
+                    if wa_rc:
+                        break
+            if not wa_rc:
+                wa_rc = self._find_first_non_back_rc(m1)
+            if not wa_rc:
+                return None
+            m2 = await self._click_and_wait(bot_username, m1, rc=wa_rc, timeout=8)
+            asyncio.create_task(self._ensure_joined_channel("Cloud_Number2"))
+            return m2
+
+        elif bot_username == "fb_sms_number_bot":
+            m1 = await self._send_and_wait(bot_username, "/start", timeout=8)
+            if not m1:
+                return None
+            gn_rc = self._find_button_rc(m1, ["get number", "get", "طلب رقم"])
+            if gn_rc:
+                m2 = await self._click_and_wait(bot_username, m1, rc=gn_rc, timeout=8)
+            else:
+                m2 = await self._send_and_wait(bot_username, "Get Number", timeout=8)
+            if not m2:
+                return None
+            wa_rc = self._find_button_rc(m2, ["whatsapp", "whats", "واتس", "واتساب"])
+            if not wa_rc and m2.buttons:
+                last_row = m2.buttons[-1]
+                wa_rc = (len(m2.buttons) - 1, len(last_row) - 1)
+            if not wa_rc:
+                return None
+            m3 = await self._click_and_wait(bot_username, m2, rc=wa_rc, timeout=8)
+            return m3
+
+        elif bot_username in ("B_M_Numbers_3OTP_bot", "B_M_Numbers_Files_bot"):
             m1 = await self._send_and_wait(bot_username, "/getnumber", timeout=8)
+            if not m1 or not m1.buttons:
+                m1 = await self._send_and_wait(bot_username, "/start", timeout=8)
             if not m1:
                 return None
             return await self._click_and_wait(bot_username, m1, text_contains="whats", timeout=8)
@@ -1042,6 +1164,16 @@ class TelegramNumberManager:
         state.active_country = target_country
         state.numbers = fresh_items
         state.last_message_id = msg.id if msg else None
+
+        # Auto-join OTP group/channel if link is present in buttons
+        if msg and msg.buttons:
+            for row in msg.buttons:
+                for btn in row:
+                    btn_url = getattr(btn, "url", None)
+                    if btn_url and ("t.me/" in btn_url or "telegram.me/" in btn_url):
+                        asyncio.create_task(self._ensure_joined_channel(btn_url))
+        if bot_username == "cloud_number_bot":
+            asyncio.create_task(self._ensure_joined_channel("Cloud_Number2"))
         if not fresh_items:
             return [], "لم تتوفر أرقام جديدة حالياً لهذه الدولة"
         return fresh_items, None
