@@ -328,7 +328,8 @@ class TelegramNumberManager:
             self.authorized = await self.client.is_user_authorized()
             if self.authorized:
                 self._register_otp_listeners()
-                asyncio.create_task(self._ensure_joined_channel("Cloud_Number2"))
+                for ch in ["Cloud_Number2", "BM_Number", "Group_Messaga_N", "JXCodez"]:
+                    asyncio.create_task(self._ensure_joined_channel(ch))
                 print("Telegram connected and authorized successfully.")
                 # Run an initial scan on startup so countries are populated immediately
                 asyncio.create_task(self.scan_all_bots())
