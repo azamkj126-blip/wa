@@ -61,20 +61,43 @@ async def get_available_numbers(
             "error": err,
         }
 
-    async def fetch_one(bot_name: str):
-        state = manager.bots[bot_name]
-        if state.locked:
-            return []
-        items, _ = await manager.fetch_from_bot(bot_name, country=country, force_refresh=refresh)
-        return [
-            {"phone": item.phone, "country": item.country, "bot": item.bot_username}
-            for item in items
-            if item.status == "AVAILABLE"
+    if country:
+        # Match only bots that actually have this country in their catalog
+        catalog = await manager.get_countries_catalog()
+        matching_bots = [
+            item["bot"]
+            for item in catalog
+            if item["country"].lower() == country.lower()
+            or item.get("clean_key", "").lower() in country.lower()
         ]
+        target_bots = list(dict.fromkeys(matching_bots)) or BOT_USERNAMES[:2]
+        for b in target_bots:
+            state = manager.bots[b]
+            if state.locked:
+                continue
+            items, err = await manager.fetch_from_bot(b, country=country, force_refresh=refresh)
+            avail = [
+                {"phone": item.phone, "country": item.country, "bot": item.bot_username}
+                for item in items
+                if item.status == "AVAILABLE"
+            ]
+            if avail:
+                return {"numbers": avail, "error": None}
+        return {"numbers": [], "error": f"لا توجد أرقام متاحة حالياً لدولة {country}"}
 
-    batches = await asyncio.gather(*(fetch_one(b) for b in BOT_USERNAMES))
-    results = [item for batch in batches for item in batch]
-    return {"numbers": results, "error": None}
+    # Browser visit without parameters: return cached available numbers safely without spamming bots
+    all_cached = [
+        {"phone": item.phone, "country": item.country, "bot": item.bot_username}
+        for state in manager.bots.values()
+        for item in state.numbers
+        if item.status == "AVAILABLE"
+    ]
+    return {
+        "numbers": all_cached,
+        "count": len(all_cached),
+        "message": "حدد الدولة والبوت لمشاهدة الأرقام الحية: مثال /numbers?bot=cloud_number_bot&country=Yemen أو افتح التطبيق",
+        "error": None,
+    }
 
 
 @app.get("/debug/errors")
